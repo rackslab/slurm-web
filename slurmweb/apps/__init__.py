@@ -47,7 +47,7 @@ class SlurmwebApp(Flask):
     def run(self, debug: bool = False):
         logger.info("Running %s application", self.NAME)
         super().run(
-            host="localhost",
-            port=3332,
+            host=self.settings.service.interface,
+            port=self.settings.service.port,
             debug=debug,
         )

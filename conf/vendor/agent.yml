@@ -7,6 +7,16 @@ slurmrestd:
     default: /var/spool/slurm/restd/slurmrestd.socket
     doc: Path to slurmrestd UNIX socket
 
+service:
+  interface:
+    type: str
+    default: localhost
+    doc: Interface address to bind for incoming connections
+  port:
+    type: int
+    default: 5000
+    doc: TCP port to listen for incoming connections
+
 authentication:
   method:
     type: str
