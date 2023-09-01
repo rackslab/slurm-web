@@ -1,0 +1,35 @@
+---
+# This file contains the configuration settings definition for Slurm-web agent
+# in RFL ConfigurationLoader format.
+slurmrestd:
+  socket:
+    type: path
+    default: /var/spool/slurm/restd/slurmrestd.socket
+    doc: Path to slurmrestd UNIX socket
+
+authentication:
+  method:
+    type: str
+    choices:
+    - ldap
+    default: ldap
+    doc: Authentification method
+
+ldap:
+  uri:
+    type: uri
+    doc: URI to connect to LDAP server
+    ex: ldap://localhost
+    #required: when authentication.method=='ldap'
+  cacert:
+    type: path
+    doc: Path to CA certificate
+    ex: /path/to/certificate.pem
+  user_base:
+    type: str
+    doc: Base DN for users entries
+    ex: ou=people,dc=example,dc=org
+  group_base:
+    type: str
+    doc: Base DN for group entries
+    ex: ou=group,dc=example,dc=org
