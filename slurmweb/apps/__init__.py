@@ -18,36 +18,61 @@
 # along with Slurm-web.  If not, see <https://www.gnu.org/licenses/>.
 
 from pathlib import Path
+import sys
 import logging
 
 from flask import Flask
 from rfl.settings import RuntimeSettings
+from rfl.settings.errors import SettingsDefinitionError
 
 from ..log import setup_logger, TTYFormatter
 
 logger = logging.getLogger(__name__)
 
 
+class SlurmwebAppArgs:
+    pass
+
+
 class SlurmwebApp(Flask):
-    def __init__(self, debug: bool, show_libs_logs: bool, vendor_conf, site_conf):
+
+    NAME = None
+    SITE_CONFIGURATION = None
+    SETTINGS_DEFINITION = None
+    VIEWS = set()
+
+    def __init__(self, args: SlurmwebAppArgs):
         super().__init__(self.NAME)
         # load configuration files
         setup_logger(
-            "slurmweb", TTYFormatter, debug=debug, show_libs_logs=show_libs_logs
+            "slurmweb",
+            TTYFormatter,
+            debug=args.debug,
+            show_libs_logs=args.full_debug,
         )
-        self.settings = RuntimeSettings.definition_yaml(Path(self.SETTINGS_DEFINITION))
-        self.settings.override_ini(Path(self.SITE_CONFIGURATION))
+        try:
+            self.settings = RuntimeSettings.yaml_definition(args.conf_defs)
+        except SettingsDefinitionError as err:
+            logger.critical(err)
+            sys.exit(1)
+        self.settings.override_ini(args.conf)
         # set URL rules
         for route in self.VIEWS:
             kwargs = dict()
             if route.methods is not None:
                 kwargs["methods"] = route.methods
             self.add_url_rule(route.endpoint, view_func=route.func, **kwargs)
+        self.debug = args.full_debug
 
-    def run(self, debug: bool = False):
+    def run(self):
         logger.info("Running %s application", self.NAME)
+        if self.settings.service.cors:
+            logger.debug("CORS is enabled")
+            from flask_cors import CORS
+
+            CORS(self)
         super().run(
             host=self.settings.service.interface,
             port=self.settings.service.port,
-            debug=debug,
+            debug=self.debug,
         )

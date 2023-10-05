@@ -21,6 +21,8 @@ import argparse
 from pathlib import Path
 
 from ..version import get_version
+
+from ..apps import SlurmwebAppArgs
 from ..apps.agent import SlurmwebAppAgent
 
 
@@ -48,19 +50,17 @@ class SlurmwebExecAgent:
             help="Enable full debug mode",
         )
         parser.add_argument(
-            "--vendor-conf",
-            help="Path to vendor settings definition file (default: %(default)s)",
+            "--conf-defs",
+            help="Path to configuration settings definition file (default: %(default)s)",
             default=SlurmwebAppAgent.SETTINGS_DEFINITION,
             type=Path,
         )
         parser.add_argument(
-            "--site-conf",
-            help="Path to site configuration file (default: %(default)s)",
+            "--conf",
+            help="Path to configuration file (default: %(default)s)",
             default=SlurmwebAppAgent.SITE_CONFIGURATION,
             type=Path,
         )
-        args = parser.parse_args()
-        application = SlurmwebAppAgent(
-            args.debug, args.full_debug, args.vendor_conf, args.site_conf
-        )
-        application.run(debug=args.full_debug)
+
+        application = SlurmwebAppAgent(parser.parse_args(namespace=SlurmwebAppArgs))
+        application.run()

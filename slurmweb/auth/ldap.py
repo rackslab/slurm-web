@@ -29,10 +29,10 @@ class AuthenticatorLdap(Authenticator):
 
     def connection(self):
 
-        connection = ldap.initialize(self.settings.uri)
+        connection = ldap.initialize(self.settings.uri.geturl())
 
         # LDAP/SSL setup
-        if self.settings.uri.startswith("ldaps"):
+        if self.settings.uri.geturl().startswith("ldaps"):
             connection.protocol_version = ldap.VERSION3
             # Force cert validation
             connection.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_DEMAND)
@@ -41,24 +41,27 @@ class AuthenticatorLdap(Authenticator):
             # Force libldap to create a new SSL context
             connection.set_option(ldap.OPT_X_TLS_NEWCTX, 0)
 
-    def login(self, data) -> None:
+        return connection
+
+    def login(self, user, password) -> None:
 
         connection = self.connection()
-        try:
-            login = data["login"]
-            password = data["password"]
-        except KeyError:
+        if user is None or password is None:
             raise SlurmwebAuthenticationError("invalid authentication request")
 
         try:
             # authenticate user on ldap
-            user_dn = f"uid={login},{self.settings.base_people}"
+            user_dn = f"uid={user},{self.settings.user_base}"
             connection.simple_bind_s(user_dn, password)
         except ldap.SERVER_DOWN:
             raise SlurmwebAuthenticationError("LDAP server is unreachable")
         except ldap.INVALID_CREDENTIALS:
-            raise SlurmwebAuthenticationError("login or password is incorrect")
+            raise SlurmwebAuthenticationError("user or password is incorrect")
         except ldap.NO_SUCH_OBJECT as error:
-            raise SlurmwebAuthenticationError(f"no such object: {str(e)}")
+            raise SlurmwebAuthenticationError(f"no such object: {str(error)}")
+        except ldap.UNWILLING_TO_PERFORM as error:
+            raise SlurmwebAuthenticationError(
+                f"LDAP server is unwilling to perform: {str(error)}"
+            )
         finally:
             connection.unbind_s()

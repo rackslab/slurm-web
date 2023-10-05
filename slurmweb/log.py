@@ -38,9 +38,13 @@ def setup_logger(
     formatter = formatter(debug)
     handler.setFormatter(formatter)
     # filter out all libs logs when show_libs_logs is false
+    def custom_filter(record):
+        if not record.name.startswith(module) and not record.name.startswith("rfl."):
+            return 0
+        return 1
+
     if not show_libs_logs:
-        lib_filter = logging.Filter(module)
-        handler.addFilter(lib_filter)
+        handler.addFilter(custom_filter)
     root_logger.addHandler(handler)
 
 

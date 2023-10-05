@@ -109,3 +109,23 @@ Feel free to comment, ask questions or give suggestions there!
 
 Any additional question? Feel free to ask in
 [project discussions](https://github.com/rackslab/slurm-web/discussions)!
+
+
+On remote cluster:
+
+```
+# socat TCP-LISTEN:2375,fork UNIX-CONNECT:/run/slurmrestd/slurmrestd.socket
+```
+
+On local host:
+
+```
+$ ssh -NL 2375:admin.deb12:2375 remi@firehpc.dev
+$ socat UNIX-LISTEN:/tmp/slurmrestd.socket,fork TCP-CONNECT:localhost:2375
+```
+
+Test:
+
+```
+$ curl --unix-socket /tmp/slurmrestd.socket http://restd/slurm/v0.0.39/nodes
+```
