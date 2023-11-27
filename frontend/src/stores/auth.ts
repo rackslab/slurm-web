@@ -14,14 +14,14 @@ export const useAuthStore = defineStore('auth', () => {
     // store user details and jwt in local storage to keep user logged in between page refreshes
     localStorage.setItem('token', _token)
 
-    // redirect to previous url or default to home page
-    router.push(returnUrl.value || '/')
+    // redirect to previous url or default to clusters page
+    router.push(returnUrl.value || { name: 'clusters' })
   }
 
   function logout() {
     token.value = null
     localStorage.removeItem('token')
-    router.push('/login')
+    router.push({ name: 'login' })
   }
 
   return { token, returnUrl, login, logout }

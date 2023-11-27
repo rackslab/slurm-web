@@ -44,10 +44,11 @@ class SlurmwebExecAgent:
             help="Enable debug mode",
         )
         parser.add_argument(
-            "--full-debug",
-            dest="full_debug",
-            action="store_true",
-            help="Enable full debug mode",
+            "--debug-flags",
+            help="Debug flags (default: %(default)s)",
+            default="slurmweb",
+            nargs="*",
+            choices=["slurmweb", "rfl", "racksdb", "werkzeug", "urllib3", "ALL"],
         )
         parser.add_argument(
             "--conf-defs",

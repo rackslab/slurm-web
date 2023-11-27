@@ -8,6 +8,15 @@ import { useRacksDBAPI } from '@/composables/RacksDBAPI'
 import type { SlurmNode } from '@/composables/SlurmAPI'
 import ClusterCanvas from '@/components/ClusterCanvas.vue'
 
+const props = defineProps({
+  cluster: {
+    type: String,
+    required: true
+  }
+})
+
+const cluster: Ref<string> = ref(props.cluster)
+
 const authStore = useAuthStore()
 
 const http = useHttp()

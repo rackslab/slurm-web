@@ -1,0 +1,18 @@
+[service]
+cluster={{ cluster_name }}
+cors=yes
+port={{ service_port }}
+
+[jwt]
+key={{ jwt_key }}
+
+[slurmrestd]
+socket={{ slurmrestd_socket }}
+
+[policy]
+definition=conf/vendor/policy.yml
+roles=conf/vendor/policy.conf
+
+[racksdb]
+db=dev/firehpc/racksdb.yml
+schema=../RacksDB/schema/racksdb.yml

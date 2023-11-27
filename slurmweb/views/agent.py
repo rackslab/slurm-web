@@ -18,15 +18,13 @@
 # along with Slurm-web.  If not, see <https://www.gnu.org/licenses/>.
 
 import json
-from functools import wraps
 import logging
 
-from flask import Response, current_app, jsonify, request, stream_with_context
+from flask import Response, current_app, jsonify, stream_with_context
 import requests
-from rfl.utils.flask.tokens import rbac_action
+from rfl.web.tokens import rbac_action
 
 from ..version import get_version
-from ..errors import SlurmwebAuthenticationError
 from . import SlurmrestdUnixAdapter
 
 
@@ -37,19 +35,9 @@ def version():
     return Response(f"Slurm-web agent v{get_version()}", mimetype="text/plain")
 
 
-def login():
-    try:
-        idents = json.loads(request.data)
-        current_app.authenticator.login(
-            user=idents["user"], password=idents["password"]
-        )
-    except SlurmwebAuthenticationError as err:
-        return jsonify(error=f"Authentication failed: {err}"), 403
-    # generate token
-    token = current_app.jwt.generate(
-        user=idents["user"], duration=current_app.settings.jwt.duration
-    )
-    return jsonify(result="Authentication successful", token=token)
+def info():
+    data = {"cluster": current_app.settings.service.cluster}
+    return jsonify(data)
 
 
 @rbac_action("view-jobs")

@@ -8,6 +8,10 @@ slurmrestd:
     doc: Path to slurmrestd UNIX socket
 
 service:
+  cluster:
+    type: str
+    required: true
+    doc: Name of cluster served by agent
   interface:
     type: str
     default: localhost
@@ -20,14 +24,6 @@ service:
     type: bool
     default: false
     doc: When true, Cross-Origin Resource Sharing (CORS) headers are enabled.
-
-authentication:
-  method:
-    type: str
-    choices:
-    - ldap
-    default: ldap
-    doc: Authentification method
 
 policy:
   definition:
@@ -46,34 +42,11 @@ policy:
     doc: |
       Path to site RBAC policy definition file with roles and permitted actions
 
-ldap:
-  uri:
-    type: uri
-    doc: URI to connect to LDAP server
-    ex: ldap://localhost
-    #required: when authentication.method=='ldap'
-  cacert:
-    type: path
-    doc: Path to CA certificate
-    ex: /path/to/certificate.pem
-  user_base:
-    type: str
-    doc: Base DN for users entries
-    ex: ou=people,dc=example,dc=org
-  group_base:
-    type: str
-    doc: Base DN for group entries
-    ex: ou=group,dc=example,dc=org
-
 jwt:
   key:
     type: path
     default: /var/lib/slurm-web/jwt.key
     doc: Path to private key for JWT signature
-  duration:
-    type: int
-    default: 1
-    doc: JWT validity duration in days
   algorithm:
     type: str
     choices:
@@ -100,3 +73,19 @@ jwt:
     default:
     doc: |
       Audience defined in generated JWT and expected in JWT provided by clients
+
+racksdb:
+  # The default values in this section must be synchronized with RacksDB library
+  # defaults.
+  db:
+    type: path
+    default: /var/lib/racksdb
+    doc: Path to RacksDB database
+  schema:
+    type: path
+    default: /usr/share/racksdb/schema.yml
+    doc: Path to RacksDB database schema
+  extensions:
+    type: path
+    default: /etc/racksdb/extensions.yml
+    doc: Path to site-specific RacksDB schema extensions

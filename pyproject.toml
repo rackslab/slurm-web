@@ -19,12 +19,15 @@ dependencies = [
     "RacksDB",
     "redis",
     "requests",
-    "RFL",
+    "RFL.settings",
+    "RFL.tokens",
+    "RFL.web",
 ]
 readme = "README.md"
 
 [project.scripts]
 slurm-web-agent = 'slurmweb.exec.agent:SlurmwebExecAgent.run'
+slurm-web-gateway = 'slurmweb.exec.gateway:SlurmwebExecGateway.run'
 
 [tool.setuptools.packages.find]
 include = ['slurmweb*']

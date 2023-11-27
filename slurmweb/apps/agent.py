@@ -19,26 +19,24 @@
 
 import logging
 
-from rfl.utils.flask.tokens import RFLTokenizedWebApp
-from racksdb.web.api import RacksDBRESTAPIBlueprint
+from rfl.web.tokens import RFLTokenizedRBACWebApp
+from racksdb.web.app import RacksDBWebBlueprint
 
 from . import SlurmwebApp
 from ..views import SlurmwebAppRoute
 from ..views import agent as views
-from ..auth import AuthenticatorFactory
-from ..events import EventsManager
 
 logger = logging.getLogger(__name__)
 
 
-class SlurmwebAppAgent(SlurmwebApp, RFLTokenizedWebApp):
+class SlurmwebAppAgent(SlurmwebApp, RFLTokenizedRBACWebApp):
 
     NAME = "slurm-web-agent"
     SITE_CONFIGURATION = "/etc/slurm-web/agent.ini"
     SETTINGS_DEFINITION = "/usr/share/slurm-web/agent.yml"
     VIEWS = {
         SlurmwebAppRoute("/version", views.version),
-        SlurmwebAppRoute("/login", views.login, methods=["POST"]),
+        SlurmwebAppRoute("/info", views.info),
         SlurmwebAppRoute("/streams/jobs", views.stream_jobs),
         SlurmwebAppRoute("/api/<path:query>", views.slurmrest),
     }
@@ -46,15 +44,12 @@ class SlurmwebAppAgent(SlurmwebApp, RFLTokenizedWebApp):
     def __init__(self, args):
         SlurmwebApp.__init__(self, args)
         self.register_blueprint(
-            RacksDBRESTAPIBlueprint(
-                db="/home/remi/Documents/git/products/RacksDB/examples/db",
-                ext="/etc/racksdb/extensions.yml",
-                schema="/home/remi/Documents/git/products/RacksDB/schema/racksdb.yml",
+            RacksDBWebBlueprint(
+                db=self.settings.racksdb.db,
+                ext=self.settings.racksdb.extensions,
+                schema=self.settings.racksdb.schema,
             ),
             url_prefix="/api/racksdb",
-        )
-        self.authenticator = AuthenticatorFactory.get(
-            self.settings.authentication.method, self.settings
         )
         if self.settings.policy.roles.exists():
             logger.debug("Select RBAC site roles policy %s", self.settings.policy.roles)
@@ -65,7 +60,7 @@ class SlurmwebAppAgent(SlurmwebApp, RFLTokenizedWebApp):
                 self.settings.policy.vendor_roles,
             )
             selected_roles_policy_path = self.settings.policy.vendor_roles
-        RFLTokenizedWebApp.__init__(
+        RFLTokenizedRBACWebApp.__init__(
             self,
             audience=self.settings.jwt.audience,
             algorithm=self.settings.jwt.algorithm,
@@ -73,4 +68,3 @@ class SlurmwebAppAgent(SlurmwebApp, RFLTokenizedWebApp):
             policy=self.settings.policy.definition,
             roles=selected_roles_policy_path,
         )
-        self.events = EventsManager("localhost", 6379, "usr:job")

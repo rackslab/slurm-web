@@ -17,14 +17,14 @@
 # You should have received a copy of the GNU General Public License
 # along with Slurm-web.  If not, see <https://www.gnu.org/licenses/>.
 
+from typing import List
 import logging
 
 
 def setup_logger(
-    module: str,
     formatter: logging.Formatter,
     debug: bool = False,
-    show_libs_logs: bool = False,
+    flags: List[str] = [],
 ) -> None:
     if debug:
         logging_level = logging.DEBUG
@@ -37,14 +37,15 @@ def setup_logger(
     handler.setLevel(logging_level)
     formatter = formatter(debug)
     handler.setFormatter(formatter)
-    # filter out all libs logs when show_libs_logs is false
+    # filter out all libs logs not enabled in flags
     def custom_filter(record):
-        if not record.name.startswith(module) and not record.name.startswith("rfl."):
+        if "ALL" in flags:
+            return 1
+        if record.name.split(".")[0] not in flags:
             return 0
         return 1
 
-    if not show_libs_logs:
-        handler.addFilter(custom_filter)
+    handler.addFilter(custom_filter)
     root_logger.addHandler(handler)
 
 

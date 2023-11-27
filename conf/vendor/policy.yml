@@ -1,3 +1,6 @@
 ---
 actions:
   view-jobs: View all users jobs
+  view-own-jobs: View own jobs
+  view-nodes: View all nodes
+  view-qos: View all defined QOS

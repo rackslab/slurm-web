@@ -17,13 +17,12 @@
 # You should have received a copy of the GNU General Public License
 # along with Slurm-web.  If not, see <https://www.gnu.org/licenses/>.
 
-from pathlib import Path
 import sys
 import logging
 
-from flask import Flask
+from flask import Flask, jsonify
 from rfl.settings import RuntimeSettings
-from rfl.settings.errors import SettingsDefinitionError
+from rfl.settings.errors import SettingsDefinitionError, SettingsOverrideError
 
 from ..log import setup_logger, TTYFormatter
 
@@ -31,6 +30,8 @@ logger = logging.getLogger(__name__)
 
 
 class SlurmwebAppArgs:
+    """argparser Namespace for SlurmwebExec*"""
+
     pass
 
 
@@ -45,24 +46,37 @@ class SlurmwebApp(Flask):
         super().__init__(self.NAME)
         # load configuration files
         setup_logger(
-            "slurmweb",
             TTYFormatter,
             debug=args.debug,
-            show_libs_logs=args.full_debug,
+            flags=args.debug_flags,
         )
         try:
             self.settings = RuntimeSettings.yaml_definition(args.conf_defs)
         except SettingsDefinitionError as err:
             logger.critical(err)
             sys.exit(1)
-        self.settings.override_ini(args.conf)
+        try:
+            self.settings.override_ini(args.conf)
+        except SettingsOverrideError as err:
+            logger.critical(err)
+            sys.exit(1)
         # set URL rules
         for route in self.VIEWS:
             kwargs = dict()
             if route.methods is not None:
                 kwargs["methods"] = route.methods
             self.add_url_rule(route.endpoint, view_func=route.func, **kwargs)
-        self.debug = args.full_debug
+        self.debug_flags = args.debug_flags
+
+        # register generic error handler
+        for error in [403, 404]:
+            self.register_error_handler(error, self._handle_bad_request)
+
+    def _handle_bad_request(self, error):
+        return (
+            jsonify(code=error.code, name=error.name, description=error.description),
+            error.code,
+        )
 
     def run(self):
         logger.info("Running %s application", self.NAME)
@@ -74,5 +88,5 @@ class SlurmwebApp(Flask):
         super().run(
             host=self.settings.service.interface,
             port=self.settings.service.port,
-            debug=self.debug,
+            debug="werkzeug" in self.debug_flags,
         )
