@@ -8,15 +8,15 @@ import argparse
 from pathlib import Path
 
 from ..version import get_version
-
 from ..apps import SlurmwebAppArgs
-from ..apps.agent import SlurmwebAppAgent
+from ..apps.ldap import SlurmwebAppLDAPCheck
+from ..apps.gateway import SlurmwebAppGateway
 
 
-class SlurmwebExecAgent:
+class SlurmwebExecLDAPCheck:
     @staticmethod
     def run():
-        parser = argparse.ArgumentParser(description=SlurmwebAppAgent.NAME)
+        parser = argparse.ArgumentParser(description=SlurmwebAppLDAPCheck.NAME)
         parser.add_argument(
             "-v",
             "--version",
@@ -40,15 +40,15 @@ class SlurmwebExecAgent:
         parser.add_argument(
             "--conf-defs",
             help="Path to configuration settings definition file (default: %(default)s)",
-            default=SlurmwebAppAgent.SETTINGS_DEFINITION,
+            default=SlurmwebAppGateway.SETTINGS_DEFINITION,
             type=Path,
         )
         parser.add_argument(
             "--conf",
             help="Path to configuration file (default: %(default)s)",
-            default=SlurmwebAppAgent.SITE_CONFIGURATION,
+            default=SlurmwebAppGateway.SITE_CONFIGURATION,
             type=Path,
         )
 
-        application = SlurmwebAppAgent(parser.parse_args(namespace=SlurmwebAppArgs))
+        application = SlurmwebAppLDAPCheck(parser.parse_args(namespace=SlurmwebAppArgs))
         application.run()

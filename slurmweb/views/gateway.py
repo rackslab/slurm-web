@@ -1,33 +1,39 @@
-#!/usr/bin/env python3
-#
-# Copyright (C) 2023 Rackslab
+# Copyright (c) 2023 Rackslab
 #
 # This file is part of Slurm-web.
 #
-# Slurm-web is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Slurm-web is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with Slurm-web.  If not, see <https://www.gnu.org/licenses/>.
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 import json
 import logging
+from functools import wraps
 
 from flask import Response, current_app, jsonify, request, abort
 import requests
+from rfl.web.tokens import check_jwt
+from rfl.authentication.errors import LDAPAuthenticationError
 
 from ..version import get_version
-from ..errors import SlurmwebAuthenticationError
 
 
 logger = logging.getLogger(__name__)
+
+
+def validate_cluster(view):
+    """Decorator for Flask views functions check for valid cluster path parameter."""
+
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        cluster = kwargs["cluster"]
+        if cluster not in current_app.agents.keys():
+            abort(
+                404,
+                f"Unable to retrieve {view.__name__} from cluster {cluster}, cluster "
+                "not found",
+            )
+        return view(*args, **kwargs)
+
+    return wrapped
 
 
 def version():
@@ -37,33 +43,76 @@ def version():
 def login():
     try:
         idents = json.loads(request.data)
-        current_app.authenticator.login(
+        user = current_app.authentifier.login(
             user=idents["user"], password=idents["password"]
         )
-    except SlurmwebAuthenticationError as err:
-        abort(403, f"Authentication failed: {err}")
+    except LDAPAuthenticationError as err:
+        logger.warning(
+            "LDAP authentication error for user %s: %s", idents["user"], str(err)
+        )
+        abort(401, str(err))
+    logger.info("User %s authenticated successfully", user)
     # generate token
     token = current_app.jwt.generate(
-        user=idents["user"], duration=current_app.settings.jwt.duration
+        user=user, duration=current_app.settings.jwt.duration
     )
+    # get permissions on all agents
+    clusters = []
+    for agent in current_app.agents.values():
+        cluster = {"name": agent.cluster}
+        response = request_agent(agent.cluster, "permissions", token)
+        if response.status_code != 200:
+            logger.error(
+                "Unable to retrieve permissions from cluster %s: %d",
+                agent.cluster,
+                response.status_code,
+            )
+        else:
+            cluster.update(response.json())
+            clusters.append(cluster)
     return jsonify(
         result="Authentication successful",
         token=token,
-        clusters=[agent.cluster for agent in current_app.agents.values()],
+        fullname=user.fullname,
+        groups=user.groups,
+        clusters=clusters,
     )
 
 
-def jobs(cluster):
-    if cluster not in current_app.agent.keys():
-        abort(404, f"Unable to retrieve jobs from cluster {cluster}, cluster not found")
-    response = requests.get(f"{current_app.agents[cluster].url}/jobs")
+def request_agent(cluster: str, query: str, token: str = None):
+    headers = {}
+    if token is not None:
+        headers = {"Authorization": f"Bearer {token}"}
+    return requests.get(
+        f"{current_app.agents[cluster].url}/{query}",
+        headers=headers,
+    )
+
+
+def proxy_agent(cluster: str, query: str, token: str = None):
+    response = request_agent(cluster, query, token)
     return jsonify(response.json()), response.status_code
 
 
-def nodes(cluster):
-    if cluster not in current_app.agent.keys():
-        abort(
-            404, f"Unable to retrieve nodes from cluster {cluster}, cluster not found"
-        )
-    response = requests.get(f"{current_app.agents[cluster].url}/jobs")
-    return jsonify(response.json()), response.status_code
+@check_jwt
+@validate_cluster
+def stats(cluster: str):
+    return proxy_agent(cluster, "stats", request.token)
+
+
+@check_jwt
+@validate_cluster
+def jobs(cluster: str):
+    return proxy_agent(cluster, "jobs", request.token)
+
+
+@check_jwt
+@validate_cluster
+def nodes(cluster: str):
+    return proxy_agent(cluster, "nodes", request.token)
+
+
+@check_jwt
+@validate_cluster
+def qos(cluster: str):
+    return proxy_agent(cluster, "qos", request.token)

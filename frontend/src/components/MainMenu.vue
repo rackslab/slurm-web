@@ -21,10 +21,10 @@ const navigation = [
   { name: 'Dashboard', route: 'dashboard', icon: HomeIcon },
   { name: 'Jobs', route: 'jobs', icon: PlayCircleIcon },
   { name: 'Resources', route: 'resources', icon: CpuChipIcon },
-  { name: 'QOS', route: 'dashboard', icon: SwatchIcon },
-  { name: 'Reservations', route: 'dashboard', icon: CalendarIcon },
-  { name: 'Accounts', route: 'dashboard', icon: UsersIcon },
-  { name: 'Reports', route: 'dashboard', icon: ChartPieIcon }
+  { name: 'QOS', route: 'qos', icon: SwatchIcon },
+  { name: 'Reservations', route: 'reservations', icon: CalendarIcon },
+  { name: 'Accounts', route: 'accounts', icon: UsersIcon },
+  { name: 'Reports', route: 'reports', icon: ChartPieIcon }
 ]
 const sidebarOpen = ref(false)
 </script>
@@ -111,8 +111,8 @@ const sidebarOpen = ref(false)
                     </ul>
                   </li>
                   <li class="mt-auto">
-                    <a
-                      href="#"
+                    <RouterLink
+                      :to="{ name: 'settings' }"
                       class="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-indigo-200 hover:bg-indigo-700 hover:text-white"
                     >
                       <Cog6ToothIcon
@@ -120,7 +120,7 @@ const sidebarOpen = ref(false)
                         aria-hidden="true"
                       />
                       Settings
-                    </a>
+                    </RouterLink>
                   </li>
                 </ul>
               </nav>
@@ -134,7 +134,7 @@ const sidebarOpen = ref(false)
   <!-- Static sidebar for desktop -->
   <div class="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
     <!-- Sidebar component, swap this element with another sidebar if you like -->
-    <div class="flex grow flex-col gap-y-5 overflow-y-auto bg-indigo-600 px-6 pb-4">
+    <div class="flex grow flex-col gap-y-5 overflow-y-auto bg-slurmweb px-6 pb-4">
       <div class="flex h-24 shrink-0 items-center">
         <img src="/logo/bitmaps/slurm-web_horizontal_bgblue_small.png" />
       </div>
@@ -147,8 +147,8 @@ const sidebarOpen = ref(false)
                   :to="{ name: item.route }"
                   :class="[
                     item.route == runtimeStore.navigation
-                      ? 'bg-indigo-700 text-white'
-                      : 'text-indigo-200 hover:text-white hover:bg-indigo-700',
+                      ? 'bg-slurmweb-dark text-white'
+                      : 'text-slurmweb-font-disabled hover:text-white hover:slurmweb-dark',
                     'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold'
                   ]"
                 >
@@ -159,16 +159,13 @@ const sidebarOpen = ref(false)
             </ul>
           </li>
           <li class="mt-auto">
-            <a
-              href="#"
-              class="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-indigo-200 hover:bg-indigo-700 hover:text-white"
+            <RouterLink
+              :to="{ name: 'settings' }"
+              class="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-slurmweb-light hover:bg-slurmweb-dark hover:text-white"
             >
-              <Cog6ToothIcon
-                class="h-6 w-6 shrink-0 text-indigo-200 group-hover:text-white"
-                aria-hidden="true"
-              />
+              <Cog6ToothIcon class="h-6 w-6 shrink-0" aria-hidden="true" />
               Settings
-            </a>
+            </RouterLink>
           </li>
         </ul>
       </nav>

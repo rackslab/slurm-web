@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Ref } from 'vue'
+import type { RouteLocation } from 'vue-router'
+import type { ClusterPermissions } from '@/composables/GatewayAPI'
 
 export class JobsViewFilter {
   name: string
@@ -22,18 +24,6 @@ export class JobsRuntimeSettings {
   view: JobsViewSettings = new JobsViewSettings()
 }
 
-type ClusterStatus = 'AVAILABLE' | 'UNAVAILABLE'
-
-class Cluster {
-  name: string
-  status: ClusterStatus
-
-  constructor(name: string, status: ClusterStatus) {
-    this.name = name
-    this.status = status
-  }
-}
-
 type NotificationType = 'INFO' | 'ERROR'
 
 class Notification {
@@ -49,26 +39,36 @@ class Notification {
   }
 }
 
-interface RuntimeError {
+class RuntimeError {
+  timestamp: Date
+  route: string
   message: string
+  constructor(route: string, message: string) {
+    this.timestamp = new Date()
+    this.route = route
+    this.message = message
+  }
 }
 
 export const useRuntimeStore = defineStore('runtime', () => {
-
   const navigation: Ref<string> = ref('home')
+  const routePath: Ref<string> = ref('/')
+  const beforeSettingsRoute: Ref<RouteLocation | undefined> = ref(undefined)
   const jobs: Ref<JobsRuntimeSettings> = ref(new JobsRuntimeSettings())
   const errors: Ref<Array<RuntimeError>> = ref([])
   const notifications: Ref<Array<Notification>> = ref([])
-  const availableClusters: Ref<Array<Cluster>> = ref(JSON.parse(localStorage.getItem('availableClusters') || "[]") as Cluster[])
+  const availableClusters: Ref<Array<ClusterPermissions>> = ref(
+    JSON.parse(localStorage.getItem('availableClusters') || '[]') as ClusterPermissions[]
+  )
   const currentCluster: Ref<string | undefined> = ref()
 
-  function addCluster(name: string) {
-    availableClusters.value.push(new Cluster(name, 'AVAILABLE'))
-    localStorage.setItem("availableClusters", JSON.stringify(availableClusters.value));
+  function addCluster(cluster: ClusterPermissions) {
+    availableClusters.value.push(cluster)
+    localStorage.setItem('availableClusters', JSON.stringify(availableClusters.value))
   }
 
   function checkClusterAvailable(name: string): boolean {
-    return (availableClusters.value.filter((cluster) => cluster.name === name).length) > 0
+    return availableClusters.value.filter((cluster) => cluster.name === name).length > 0
   }
 
   function addNotification(notification: Notification) {
@@ -84,7 +84,7 @@ export const useRuntimeStore = defineStore('runtime', () => {
   }
 
   function reportError(message: string) {
-    errors.value.push({ message: message })
+    errors.value.push(new RuntimeError(routePath.value, message))
     // Do not store more than 100 errors
     if (errors.value.length > 100) {
       errors.value = errors.value.slice(errors.value.length - 100)
@@ -93,6 +93,8 @@ export const useRuntimeStore = defineStore('runtime', () => {
   }
   return {
     navigation,
+    routePath,
+    beforeSettingsRoute,
     jobs,
     errors,
     notifications,

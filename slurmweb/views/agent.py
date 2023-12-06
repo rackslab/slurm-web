@@ -1,28 +1,14 @@
-#!/usr/bin/env python3
-#
-# Copyright (C) 2023 Rackslab
+# Copyright (c) 2023 Rackslab
 #
 # This file is part of Slurm-web.
 #
-# Slurm-web is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Slurm-web is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with Slurm-web.  If not, see <https://www.gnu.org/licenses/>.
+# SPDX-License-Identifier: GPL-3.0-or-later
 
-import json
 import logging
 
-from flask import Response, current_app, jsonify, stream_with_context
+from flask import Response, current_app, jsonify, abort, request
 import requests
-from rfl.web.tokens import rbac_action
+from rfl.web.tokens import rbac_action, check_jwt
 
 from ..version import get_version
 from . import SlurmrestdUnixAdapter
@@ -40,28 +26,62 @@ def info():
     return jsonify(data)
 
 
-@rbac_action("view-jobs")
+@check_jwt
+def permissions():
+    roles, actions = current_app.policy.roles_actions(request.user)
+    return jsonify(
+        {
+            "roles": list(roles),
+            "actions": list(actions),
+        }
+    )
+
+
 def slurmrest(query):
 
     session = requests.Session()
     prefix = "http+unix://slurmrestd/"
     session.mount(prefix, SlurmrestdUnixAdapter(current_app.settings.slurmrestd.socket))
-    response = session.get(f"{prefix}/{query}")
-    return jsonify(response.json()), response.status_code
+    try:
+        response = session.get(f"{prefix}/{query}")
+        return response.json()
+    except requests.exceptions.ConnectionError as err:
+        abort(500, f"Unable to connect to slurmrestd: {err}")
+
+
+@rbac_action("view-stats")
+def stats():
+    data = slurmrest("/slurm/v0.0.39/jobs")
+    total = 0
+    running = 0
+    for job in data["jobs"]:
+        total += 1
+        if "RUNNING" in job["job_state"]:
+            running += 1
+    data = slurmrest("/slurm/v0.0.39/nodes")
+    nodes = 0
+    cores = 0
+    for node in data["nodes"]:
+        nodes += 1
+        cores += node["cpus"]
+    return jsonify(
+        {
+            "resources": {"nodes": nodes, "cores": cores},
+            "jobs": {"running": running, "total": total},
+        }
+    )
 
 
 @rbac_action("view-jobs")
-def stream_jobs():
-    def stream():
-        ping_message = 'event: ping\ndata: {"time": "now"}\n\n'
-        yield ping_message.encode()
-        for message in current_app.events.pubsub.listen():
-            logger.debug("Received event message %s from pubsub", str(message))
-            data = {"job_id": message["data"]}
-            yield f"event: job\ndata: {json.dumps(data)}\n\n".encode()
+def jobs():
+    return jsonify(slurmrest("/slurm/v0.0.39/jobs")["jobs"])
 
-    return Response(
-        stream_with_context(stream()),
-        mimetype="text/event-stream",
-        headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
-    )
+
+@rbac_action("view-nodes")
+def nodes():
+    return jsonify(slurmrest("/slurm/v0.0.39/nodes")["nodes"])
+
+
+@rbac_action("view-qos")
+def qos():
+    return jsonify(slurmrest("/slurmdb/v0.0.39/qos")["qos"])

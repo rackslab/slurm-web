@@ -15,12 +15,12 @@ authors = [
 dependencies = [
     "Flask",
     "Flask-Cors",
-    "python-ldap",
     "RacksDB",
     "redis",
     "requests",
+    "RFL.authentication",
+    "RFL.log",
     "RFL.settings",
-    "RFL.tokens",
     "RFL.web",
 ]
 readme = "README.md"
@@ -28,6 +28,7 @@ readme = "README.md"
 [project.scripts]
 slurm-web-agent = 'slurmweb.exec.agent:SlurmwebExecAgent.run'
 slurm-web-gateway = 'slurmweb.exec.gateway:SlurmwebExecGateway.run'
+slurm-web-ldap-check = 'slurmweb.exec.ldap:SlurmwebExecLDAPCheck.run'
 
 [tool.setuptools.packages.find]
 include = ['slurmweb*']

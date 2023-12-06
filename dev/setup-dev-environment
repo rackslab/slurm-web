@@ -1,4 +1,10 @@
 #!/usr/bin/python3
+#
+# Copyright (c) 2023 Rackslab
+#
+# This file is part of Slurm-web.
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 from dataclasses import dataclass
 import sshtunnel
@@ -141,6 +147,7 @@ class SlurmwebAgent:
                 template.render(
                     cluster_name=self.name,
                     service_port=self.service_port,
+                    slurmrestd_socket=f"/tmp/slurmrestd-{self.name}.socket",
                     jwt_key=jwt_key_path,
                 )
             )

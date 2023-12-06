@@ -23,14 +23,14 @@
      inkscape:pagecheckerboard="0"
      inkscape:document-units="mm"
      showgrid="true"
-     inkscape:zoom="0.77771465"
-     inkscape:cx="1081.3735"
-     inkscape:cy="553.54493"
-     inkscape:window-width="2623"
-     inkscape:window-height="1524"
-     inkscape:window-x="26"
-     inkscape:window-y="23"
-     inkscape:window-maximized="0"
+     inkscape:zoom="1.1523583"
+     inkscape:cx="932.43571"
+     inkscape:cy="524.57644"
+     inkscape:window-width="1920"
+     inkscape:window-height="1136"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
      inkscape:current-layer="layer1"
      units="px">
     <inkscape:grid
@@ -39,6 +39,20 @@
   </sodipodi:namedview>
   <defs
      id="defs129748">
+    <marker
+       style="overflow:visible;"
+       id="Arrow1Mend"
+       refX="0.0"
+       refY="0.0"
+       orient="auto"
+       inkscape:stockid="Arrow1Mend"
+       inkscape:isstock="true">
+      <path
+         transform="scale(0.4) rotate(180) translate(10,0)"
+         style="fill-rule:evenodd;fill:context-stroke;stroke:context-stroke;stroke-width:1.0pt;"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         id="path14056" />
+    </marker>
     <filter
        inkscape:collect="always"
        style="color-interpolation-filters:sRGB"
@@ -608,5 +622,67 @@
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.93889px;font-family:Ubuntu;-inkscape-font-specification:Ubuntu;fill:#ffffff;fill-opacity:1;stroke-width:0.264583"
          x="244.68442"
          y="175.07327">Sign in</tspan></text>
+    <rect
+       style="fill:#486a86;fill-opacity:1;stroke-width:0.300656;stroke-linecap:round"
+       id="rect5712"
+       width="116.41666"
+       height="13.229172"
+       x="209.02086"
+       y="182.5625"
+       rx="1.3229166"
+       ry="1.3229166" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.93889px;line-height:1.25;font-family:Ubuntu;-inkscape-font-specification:Ubuntu;stroke-width:0.264583"
+       x="257.9136"
+       y="190.94827"
+       id="text5716"
+       inkscape:transform-center-x="4.2997545"><tspan
+         sodipodi:role="line"
+         id="tspan5714"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.93889px;font-family:Ubuntu;-inkscape-font-specification:Ubuntu;fill:#ffffff;fill-opacity:1;stroke-width:0.264583"
+         x="257.9136"
+         y="190.94827">Sign in</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:6.35px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;stroke-width:0.264583"
+       x="180.31711"
+       y="191.90518"
+       id="text8160"><tspan
+         sodipodi:role="line"
+         id="tspan8158"
+         style="font-style:oblique;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Purisa;-inkscape-font-specification:'Purisa Oblique';stroke-width:0.264583;font-size:6.35px"
+         x="180.31711"
+         y="191.90518">hover</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.665;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Mend)"
+       d="m 198.4375,179.91667 c 0.89186,4.2976 2.64583,5.29166 10.58333,7.93749"
+       id="path13950"
+       sodipodi:nodetypes="cc" />
+    <rect
+       style="opacity:1;fill:#efefef;fill-opacity:1;stroke:#759ab8;stroke-width:0.396875;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect14566"
+       width="116.41665"
+       height="13.229161"
+       x="198.4375"
+       y="119.06251"
+       rx="2.6458333"
+       ry="2.6458309" />
+    <text
+       xml:space="preserve"
+       style="font-size:6.35px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;stroke-width:0.264583"
+       x="167.60112"
+       y="127.46605"
+       id="text14668"><tspan
+         sodipodi:role="line"
+         id="tspan14666"
+         style="font-style:oblique;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.35px;font-family:Purisa;-inkscape-font-specification:'Purisa Oblique';stroke-width:0.264583"
+         x="167.60112"
+         y="127.46605">focus</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.665;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#Arrow1Mend)"
+       d="M 195.79167,119.06251 C 187.85417,121.70834 190.5,124.35417 198.4375,127"
+       id="path14772"
+       sodipodi:nodetypes="cc" />
   </g>
 </svg>

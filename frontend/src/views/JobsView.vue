@@ -1,16 +1,13 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, reactive, watch, computed } from 'vue'
 import type { Ref } from 'vue'
 import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import { useRuntimeStore } from '@/stores/runtime'
-import { useSlurmAPI } from '@/composables/SlurmAPI'
-import type { SlurmJob } from '@/composables/SlurmAPI'
-import { useHttp } from '@/plugins/http'
-import { loadRuntimeConfiguration } from '@/plugins/runtimeConfiguration'
+import { useGatewayAPI, AuthenticationError } from '@/composables/GatewayAPI'
+import type { ClusterJob } from '@/composables/GatewayAPI'
 import JobsSorter from '@/components/JobsSorter.vue'
 import JobStatusLabel from '@/components/JobStatusLabel.vue'
-import MainLayout from '@/components/MainLayout.vue'
+import ClusterMainLayout from '@/components/ClusterMainLayout.vue'
 
 import {
   Dialog,
@@ -22,9 +19,7 @@ import {
   TransitionRoot
 } from '@headlessui/vue'
 import { XMarkIcon } from '@heroicons/vue/24/outline'
-import {
-  ChevronDownIcon,
-} from '@heroicons/vue/20/solid'
+import { ChevronDownIcon } from '@heroicons/vue/20/solid'
 
 const props = defineProps({
   cluster: {
@@ -32,8 +27,6 @@ const props = defineProps({
     required: true
   }
 })
-
-const cluster: Ref<string> = ref(props.cluster)
 
 const filters = [
   {
@@ -71,86 +64,127 @@ const activeFilters = [
 
 const open = ref(false)
 const route = useRoute()
-const router = useRouter()
-const http = useHttp()
-const authStore = useAuthStore()
-const runtimeStore = useRuntimeStore()
-const slurmAPI = useSlurmAPI(http, authStore.token)
-const rc = loadRuntimeConfiguration()
-//const eventsSource = useEventsSource(rc.api_server, authStore.token)
 
-let jobs: Array<SlurmJob> | null = null
-const sortedJobs: Ref<Array<SlurmJob> | null> = ref(null)
+function computeSortJobs() {
+  console.log(`Computing sorted jobs by ${runtimeStore.jobs.view.sort}`)
+  // https://vuejs.org/guide/essentials/list.html#displaying-filtered-sorted-results
+  return [...jobs.value].sort((a, b) => {
+    if (runtimeStore.jobs.view.sort == 'user') {
+      if (a.user_name > b.user_name) {
+        return 1
+      }
+      if (a.user_name < b.user_name) {
+        return -1
+      }
+      return 0
+    } else if (runtimeStore.jobs.view.sort == 'state') {
+      if (a.job_state > b.job_state) {
+        return 1
+      }
+      if (a.job_state < b.job_state) {
+        return -1
+      }
+      return 0
+    } else {
+      // by default, sort by id
+      if (a.id > b.id) {
+        return 1
+      }
+      if (a.id < b.id) {
+        return -1
+      }
+      return 0
+    }
+  })
+}
+
+const jobs: Ref<Array<ClusterJob>> = ref([])
+const sortedJobs = computed(() => {
+  return computeSortJobs()
+})
 
 let interval: number = 0
+const router = useRouter()
+const gateway = useGatewayAPI()
 
-async function getJobs() {
-  jobs = await slurmAPI.jobs()
-  updateSortedJobs()
+const runtimeStore = useRuntimeStore()
+
+function reportAuthenticationError(error: AuthenticationError) {
+  runtimeStore.reportError(`Authentication error: ${error.message}`)
+  router.push({ name: 'login' })
+}
+
+function reportOtherError(error: Error) {
+  runtimeStore.reportError(error.message)
+}
+
+async function getClusterJobs(cluster: string) {
+  try {
+    jobs.value = await gateway.jobs(cluster)
+  } catch (error: any) {
+    if (error instanceof AuthenticationError) {
+      reportAuthenticationError(error)
+    } else {
+      reportOtherError(error)
+    }
+  }
 }
 
 function sortJobs() {
-  router.push({ name: 'jobs', query: { sort: runtimeStore.jobs.view.sort } })
-  updateSortedJobs()
+  /*
+   * Triggered by sort emit of JobsSorter component to update route and resort
+   * the jobs with the new criteria.
+   */
+  updateQueryParameters()
+  console.log(`Sorting jobs by ${runtimeStore.jobs.view.sort}`)
 }
 
-function updateSortedJobs() {
-  if (jobs) {
-    sortedJobs.value = jobs.sort((a, b) => {
-      if (runtimeStore.jobs.view.sort == 'user') {
-        if (a.user_name > b.user_name) {
-          return 1
-        }
-        if (a.user_name < b.user_name) {
-          return -1
-        }
-        return 0
-      } else if (runtimeStore.jobs.view.sort == 'state') {
-        if (a.job_state > b.job_state) {
-          return 1
-        }
-        if (a.job_state < b.job_state) {
-          return -1
-        }
-        return 0
-      } else {
-        // by default, sort by id
-        if (a.id > b.id) {
-          return 1
-        }
-        if (a.id < b.id) {
-          return -1
-        }
-        return 0
-      }
-    })
-  }
+function startClusterJobsPoller(cluster: string) {
+  console.log(`Start jobs poller for cluster ${cluster}`)
+  getClusterJobs(cluster)
+  interval = setInterval(getClusterJobs, 20000, cluster)
 }
+
+function stopClusterJobsPoller(cluster: string) {
+  console.log(`Stop jobs poller for cluster ${cluster}`)
+  clearInterval(interval)
+}
+
+function updateQueryParameters() {
+  /*
+   * If sort criteria is absent from query, redirect to route with current
+   * jobs sorter
+   */
+  router.push({ name: 'jobs', query: { sort: runtimeStore.jobs.view.sort } })
+}
+
+watch(
+  () => props.cluster,
+  (newCluster, oldCluster) => {
+    stopClusterJobsPoller(oldCluster)
+    console.log(`Updating jobs for cluster ${newCluster}`)
+    jobs.value = []
+    startClusterJobsPoller(newCluster)
+  }
+)
 
 onMounted(() => {
-  getJobs()
-  interval = setInterval(getJobs, 3000)
+  startClusterJobsPoller(props.cluster)
   if (route.query.sort) {
+    /* Retrieve the sort criteria from query and update the store */
     runtimeStore.jobs.view.sort = route.query.sort as string
+  } else {
+    updateQueryParameters()
   }
-  //streamJobs()
 })
 
 onUnmounted(() => {
-  clearInterval(interval)
-})
-
-onBeforeRouteUpdate(async (to, from) => {
-  // When view route is updated without sort criteria, restore default sort
-  // criteria in runtime settings store.
-  if (to.query.sort == null) {
-    runtimeStore.jobs.view.restoreSortDefault()
-  }
+  stopClusterJobsPoller(props.cluster)
 })
 </script>
 
 <template>
-  <MainLayout>
+  <ClusterMainLayout :cluster="props.cluster" title="Jobs">
     <div class="bg-white">
       <!-- Mobile filter dialog -->
       <TransitionRoot as="template" :show="open">
@@ -251,7 +285,11 @@ onBeforeRouteUpdate(async (to, from) => {
       </div>
 
       <!-- Filters -->
-      <section aria-labelledby="filter-heading" class="-mx-4 -my-2 sm:-mx-6 lg:-mx-8">
+      <section
+        v-show="sortedJobs.length"
+        aria-labelledby="filter-heading"
+        class="-mx-4 -my-2 sm:-mx-6 lg:-mx-8"
+      >
         <h2 id="filter-heading" class="sr-only">Filters</h2>
 
         <div class="border-b border-gray-200 bg-white pb-4">
@@ -303,7 +341,7 @@ onBeforeRouteUpdate(async (to, from) => {
       </section>
 
       <div class="mt-8 flow-root">
-        <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+        <div v-if="sortedJobs.length" class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div class="inline-block min-w-full py-2 align-middle">
             <table class="min-w-full divide-y divide-gray-300">
               <thead>
@@ -363,7 +401,8 @@ onBeforeRouteUpdate(async (to, from) => {
             </table>
           </div>
         </div>
+        <div v-else>No job to display</div>
       </div>
     </div>
-  </MainLayout>
+  </ClusterMainLayout>
 </template>

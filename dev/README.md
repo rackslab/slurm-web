@@ -16,5 +16,5 @@ $ dev/setup-dev-environment
 Launch frontend in a third shell:
 
 ```console
-$ cd frotend && npm run dev
+$ cd frontend && npm run dev
 ```

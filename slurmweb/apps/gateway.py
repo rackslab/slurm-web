@@ -1,31 +1,19 @@
-#!/usr/bin/env python3
-#
-# Copyright (C) 2023 Rackslab
+# Copyright (c) 2023 Rackslab
 #
 # This file is part of Slurm-web.
 #
-# Slurm-web is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Slurm-web is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with Slurm-web.  If not, see <https://www.gnu.org/licenses/>.
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 import logging
 
 from rfl.web.tokens import RFLTokenizedWebApp
+from rfl.authentication.ldap import LDAPAuthentifier
 import requests
 
-from . import SlurmwebApp
+from . import SlurmwebWebApp
 from ..views import SlurmwebAppRoute
 from ..views import gateway as views
-from ..auth import AuthenticatorFactory
+from ..errors import SlurmwebConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +28,7 @@ class SlurmwebAgent:
         return cls(data["cluster"], url)
 
 
-class SlurmwebAppGateway(SlurmwebApp, RFLTokenizedWebApp):
+class SlurmwebAppGateway(SlurmwebWebApp, RFLTokenizedWebApp):
 
     NAME = "slurm-web-gateway"
     SITE_CONFIGURATION = "/etc/slurm-web/gateway.ini"
@@ -48,15 +36,28 @@ class SlurmwebAppGateway(SlurmwebApp, RFLTokenizedWebApp):
     VIEWS = {
         SlurmwebAppRoute("/version", views.version),
         SlurmwebAppRoute("/login", views.login, methods=["POST"]),
-        SlurmwebAppRoute("/agents/:cluster/jobs", views.jobs),
-        SlurmwebAppRoute("/agents/:cluster/nodes", views.nodes),
+        SlurmwebAppRoute("/agents/<cluster>/stats", views.stats),
+        SlurmwebAppRoute("/agents/<cluster>/jobs", views.jobs),
+        SlurmwebAppRoute("/agents/<cluster>/nodes", views.nodes),
+        SlurmwebAppRoute("/agents/<cluster>/qos", views.qos),
     }
 
     def __init__(self, args):
-        SlurmwebApp.__init__(self, args)
-        self.authenticator = AuthenticatorFactory.get(
-            self.settings.authentication.method, self.settings
-        )
+        SlurmwebWebApp.__init__(self, args)
+        if self.settings.authentication.method == "ldap":
+            self.authentifier = LDAPAuthentifier(
+                uri=self.settings.ldap.uri,
+                cacert=self.settings.ldap.cacert,
+                user_base=self.settings.ldap.user_base,
+                user_class=self.settings.ldap.user_class,
+                group_base=self.settings.ldap.group_base,
+                user_fullname_attribute=self.settings.ldap.user_fullname_attribute,
+                group_name_attribute=self.settings.ldap.group_name_attribute,
+            )
+        else:
+            raise SlurmwebConfigurationError(
+                f"Unsupport authentication method {self.settings.authentication.method}"
+            )
         RFLTokenizedWebApp.__init__(
             self,
             audience=self.settings.jwt.audience,

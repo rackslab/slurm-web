@@ -10,7 +10,12 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: colors.cyan,
+        slurmweb: {
+          light: '#ccdbe6',
+          DEFAULT: '#759ab8',
+          dark: '#486a86',
+          'font-disabled': '#dbe9f4',
+        },
       },
       animation: {
         'horizontal-shake': 'horizontal-shaking 0.35s infinite',
@@ -28,4 +33,3 @@ module.exports = {
     require('@tailwindcss/forms'),
   ],
 }
-

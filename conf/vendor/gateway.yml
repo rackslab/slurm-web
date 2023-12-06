@@ -44,6 +44,18 @@ ldap:
     type: str
     doc: Base DN for group entries
     ex: ou=group,dc=example,dc=org
+  user_class:
+    type: str
+    default: posixAccount
+    doc: Class of user entries
+  user_fullname_attribute:
+    type: str
+    default: cn
+    doc: User entry attribute for full name
+  group_name_attribute:
+    type: str
+    default: cn
+    doc: Group entry attribute for name
 
 jwt:
   key:

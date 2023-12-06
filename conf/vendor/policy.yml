@@ -1,5 +1,6 @@
 ---
 actions:
+  view-stats: View general cluster statistics
   view-jobs: View all users jobs
   view-own-jobs: View own jobs
   view-nodes: View all nodes
