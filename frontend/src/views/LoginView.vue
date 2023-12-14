@@ -45,10 +45,6 @@ async function submitLogin() {
     let response = await gateway.login({ user: username.value, password: password.value })
     disableSubmission.value = true
     authStore.login(response.token, username.value, response.fullname, response.groups)
-    runtimeStore.availableClusters = []
-    response.clusters.forEach((element) => {
-      runtimeStore.addCluster(element)
-    })
   } catch (error: any) {
     if (error instanceof AuthenticationError) {
       reportAuthenticationError(error.message)

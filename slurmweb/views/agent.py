@@ -11,6 +11,7 @@ import requests
 from rfl.web.tokens import rbac_action, check_jwt
 
 from ..version import get_version
+from ..errors import SlurmwebCacheError
 from . import SlurmrestdUnixAdapter
 
 
@@ -44,24 +45,80 @@ def slurmrest(query):
     session.mount(prefix, SlurmrestdUnixAdapter(current_app.settings.slurmrestd.socket))
     try:
         response = session.get(f"{prefix}/{query}")
-        return response.json()
     except requests.exceptions.ConnectionError as err:
+        logger.error("Unable to connect to slurmrestd: %s", err)
         abort(500, f"Unable to connect to slurmrestd: {err}")
+    result = response.json()
+    if len(result["errors"]):
+        logger.error("slurmrestd query %s errors: %s", query, result["errors"])
+        abort(500, f"slurmrestd errors: {str(result['errors'])}")
+    if len(result["warnings"]):
+        logger.warning("slurmrestd query %s warnings: %s", query, result["warnings"])
+        # abort(500, f"slurmrestd warnings: {str(result['warnings'])}")
+    return result
+
+
+def filter_fields(items, selection):
+    for item in items:
+        for key in list(item.keys()):
+            if key not in selection:
+                del item[key]
+    return items
+
+
+def _cached_data(cache_key: str, query: str, result_key: str, filters: list[str]):
+    if not current_app.settings.cache.enabled:
+        return filter_fields(slurmrest(query)[result_key], filters)
+    try:
+        data = current_app.cache.get(cache_key)
+        if data is None:
+            data = filter_fields(slurmrest(query)[result_key], filters)
+            current_app.cache.put(cache_key, data)
+        return data
+    except SlurmwebCacheError as err:
+        logger.error("Cache error: %s", str(err))
+        abort(500, f"Cache error: {str(err)}")
+
+
+def _cached_jobs():
+    return _cached_data(
+        "jobs",
+        f"/slurm/v{current_app.settings.slurmrestd.version}/jobs",
+        "jobs",
+        current_app.settings.filters.jobs,
+    )
+
+
+def _cached_nodes():
+    return _cached_data(
+        "nodes",
+        f"/slurm/v{current_app.settings.slurmrestd.version}/nodes",
+        "nodes",
+        current_app.settings.filters.nodes,
+    )
+
+
+def _cached_qos():
+    return _cached_data(
+        "qos",
+        f"/slurmdb/v{current_app.settings.slurmrestd.version}/qos",
+        "qos",
+        current_app.settings.filters.qos,
+    )
 
 
 @rbac_action("view-stats")
 def stats():
-    data = slurmrest("/slurm/v0.0.39/jobs")
     total = 0
     running = 0
-    for job in data["jobs"]:
+    for job in _cached_jobs():
         total += 1
         if "RUNNING" in job["job_state"]:
             running += 1
-    data = slurmrest("/slurm/v0.0.39/nodes")
+
     nodes = 0
     cores = 0
-    for node in data["nodes"]:
+    for node in _cached_nodes():
         nodes += 1
         cores += node["cpus"]
     return jsonify(
@@ -74,14 +131,14 @@ def stats():
 
 @rbac_action("view-jobs")
 def jobs():
-    return jsonify(slurmrest("/slurm/v0.0.39/jobs")["jobs"])
+    return jsonify(_cached_jobs())
 
 
 @rbac_action("view-nodes")
 def nodes():
-    return jsonify(slurmrest("/slurm/v0.0.39/nodes")["nodes"])
+    return jsonify(_cached_nodes())
 
 
 @rbac_action("view-qos")
 def qos():
-    return jsonify(slurmrest("/slurmdb/v0.0.39/qos")["qos"])
+    return jsonify(_cached_qos())

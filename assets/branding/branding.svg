@@ -3,12 +3,12 @@
 
 <svg
    width="368.20758mm"
-   height="275mm"
-   viewBox="0 0 368.20758 275"
+   height="337.33057mm"
+   viewBox="0 0 368.20758 337.33057"
    version="1.1"
    id="svg82589"
    inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
-   sodipodi:docname="logos_backgrounds.svg"
+   sodipodi:docname="branding.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -23,14 +23,14 @@
      inkscape:pagecheckerboard="0"
      inkscape:document-units="mm"
      showgrid="true"
-     inkscape:zoom="1.0998546"
-     inkscape:cx="744.18928"
-     inkscape:cy="431.42067"
-     inkscape:window-width="3840"
-     inkscape:window-height="2096"
-     inkscape:window-x="0"
-     inkscape:window-y="0"
-     inkscape:window-maximized="1"
+     inkscape:zoom="0.5499273"
+     inkscape:cx="394.59761"
+     inkscape:cy="1279.26"
+     inkscape:window-width="2494"
+     inkscape:window-height="1374"
+     inkscape:window-x="26"
+     inkscape:window-y="23"
+     inkscape:window-maximized="0"
      inkscape:current-layer="layer1"
      fit-margin-top="0"
      fit-margin-left="0"
@@ -40,7 +40,7 @@
        type="axonomgrid"
        id="grid82652"
        visible="false"
-       originx="277.12813"
+       originx="277.12815"
        originy="41.830534" />
   </sodipodi:namedview>
   <defs
@@ -4108,5 +4108,116 @@
              y="452.88593">·</tspan></text>
       </g>
     </g>
+    <rect
+       style="fill:#486a86;fill-opacity:1;stroke-width:1;stroke-linecap:round;stroke-linejoin:round"
+       id="rect846"
+       width="38.105106"
+       height="25.999998"
+       x="-61.487816"
+       y="269.5"
+       rx="0"
+       ry="0" />
+    <rect
+       style="fill:#3b5163;fill-opacity:1;stroke-width:1;stroke-linecap:round;stroke-linejoin:round"
+       id="rect1132"
+       width="38.105122"
+       height="26.000013"
+       x="-23.382708"
+       y="269.5"
+       rx="0"
+       ry="0" />
+    <rect
+       style="fill:#759ab8;fill-opacity:1;stroke-width:1;stroke-linecap:round;stroke-linejoin:round"
+       id="rect1154"
+       width="38.105114"
+       height="26.000013"
+       x="-137.69806"
+       y="269.5"
+       rx="0"
+       ry="0" />
+    <rect
+       style="fill:#6185a3;fill-opacity:1;stroke-width:1;stroke-linecap:round;stroke-linejoin:round"
+       id="rect1174"
+       width="38.105106"
+       height="26.000017"
+       x="-99.592934"
+       y="269.5"
+       rx="0"
+       ry="0" />
+    <rect
+       style="fill:#dbe9f4;fill-opacity:1;stroke-width:0.999996;stroke-linecap:round;stroke-linejoin:round"
+       id="rect2106"
+       width="38.105129"
+       height="26.000011"
+       x="-175.80319"
+       y="269.5"
+       rx="0"
+       ry="0" />
+    <text
+       xml:space="preserve"
+       style="font-size:4.93889px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;stroke-width:0.264583"
+       x="-163.23599"
+       y="263.33884"
+       id="text14668"><tspan
+         sodipodi:role="line"
+         id="tspan14666"
+         style="font-style:oblique;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.93889px;font-family:Purisa;-inkscape-font-specification:'Purisa Oblique';stroke-width:0.264583"
+         x="-163.23599"
+         y="263.33884">light</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.93889px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;stroke-width:0.264583"
+       x="-127.92318"
+       y="263.33884"
+       id="text4640"><tspan
+         sodipodi:role="line"
+         id="tspan4638"
+         style="font-style:oblique;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.93889px;font-family:Purisa;-inkscape-font-specification:'Purisa Oblique';stroke-width:0.264583"
+         x="-127.92318"
+         y="263.33884">default</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.93889px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;stroke-width:0.264583"
+       x="-88.553459"
+       y="263.33884"
+       id="text7548"><tspan
+         sodipodi:role="line"
+         id="tspan7546"
+         style="font-style:oblique;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.93889px;font-family:Purisa;-inkscape-font-specification:'Purisa Oblique';stroke-width:0.264583"
+         x="-88.553459"
+         y="263.33884">darker</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.93889px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;stroke-width:0.264583"
+       x="-46.88945"
+       y="263.33884"
+       id="text8776"><tspan
+         sodipodi:role="line"
+         id="tspan8774"
+         style="font-style:oblique;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.93889px;font-family:Purisa;-inkscape-font-specification:'Purisa Oblique';stroke-width:0.264583"
+         x="-46.88945"
+         y="263.33884">dark</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:4.93889px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;stroke-width:0.264583"
+       x="-15.038465"
+       y="263.33884"
+       id="text9476"><tspan
+         sodipodi:role="line"
+         id="tspan9474"
+         style="font-style:oblique;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.93889px;font-family:Purisa;-inkscape-font-specification:'Purisa Oblique';stroke-width:0.264583"
+         x="-15.038465"
+         y="263.33884">verydark</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:8.46667px;line-height:1.25;font-family:sans-serif;-inkscape-font-specification:sans-serif;stroke-width:0.264583"
+       x="-220.52361"
+       y="283.39288"
+       id="text11016"><tspan
+         sodipodi:role="line"
+         id="tspan11014"
+         style="font-style:oblique;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:8.46667px;font-family:Purisa;-inkscape-font-specification:'Purisa Bold Oblique';stroke-width:0.264583"
+         x="-220.52361"
+         y="283.39288">colors</tspan></text>
   </g>
 </svg>

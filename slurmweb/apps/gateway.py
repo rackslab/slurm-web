@@ -36,6 +36,8 @@ class SlurmwebAppGateway(SlurmwebWebApp, RFLTokenizedWebApp):
     VIEWS = {
         SlurmwebAppRoute("/version", views.version),
         SlurmwebAppRoute("/login", views.login, methods=["POST"]),
+        SlurmwebAppRoute("/clusters", views.clusters),
+        SlurmwebAppRoute("/users", views.users),
         SlurmwebAppRoute("/agents/<cluster>/stats", views.stats),
         SlurmwebAppRoute("/agents/<cluster>/jobs", views.jobs),
         SlurmwebAppRoute("/agents/<cluster>/nodes", views.nodes),
@@ -68,15 +70,15 @@ class SlurmwebAppGateway(SlurmwebWebApp, RFLTokenizedWebApp):
         self.agents = {}
         for url in self.settings.agents.url:
             try:
-                logger.info("Retrieving info from agent at url %s", url)
-                agent = self._agent_info(url)
+                logger.info("Retrieving info from agent at url %s", url.geturl())
+                agent = self._agent_info(url.geturl())
             except (
                 requests.exceptions.ConnectionError,
                 requests.exceptions.JSONDecodeError,
             ) as err:
                 logger.error(
                     "Unable to retrieve agent info from url %s: [%s] %s",
-                    url,
+                    url.geturl(),
                     type(err).__name__,
                     str(err),
                 )
@@ -84,7 +86,7 @@ class SlurmwebAppGateway(SlurmwebWebApp, RFLTokenizedWebApp):
                 logger.debug(
                     "Discovered available agent for cluster %s at url %s",
                     agent.cluster,
-                    url,
+                    url.geturl(),
                 )
                 self.agents[agent.cluster] = agent
 

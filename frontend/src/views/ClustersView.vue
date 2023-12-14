@@ -1,51 +1,123 @@
 <script setup lang="ts">
-import { RouterLink } from 'vue-router'
+import { onMounted, ref } from 'vue'
+import type { Ref } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
 import { useRuntimeStore } from '@/stores/runtime'
+import {
+  useGatewayAPI,
+  AuthenticationError,
+  type ClusterDescription
+} from '@/composables/GatewayAPI'
 import { ChevronRightIcon } from '@heroicons/vue/20/solid'
+import { CpuChipIcon, PlayCircleIcon } from '@heroicons/vue/24/outline'
 
 const runtimeStore = useRuntimeStore()
+const gateway = useGatewayAPI()
+const router = useRouter()
+const clusters: Ref<Array<ClusterDescription>> = ref([])
+const unable: Ref<Boolean> = ref(false)
+
+function reportAuthenticationError(error: AuthenticationError) {
+  runtimeStore.reportError(`Authentication error: ${error.message}`)
+  router.push({ name: 'login' })
+}
+
+function reportOtherError(error: Error) {
+  runtimeStore.reportError(`Server error: ${error.message}`)
+  unable.value = true
+}
+
+async function getClustersDescriptions() {
+  try {
+    clusters.value = await gateway.clusters()
+    runtimeStore.availableClusters = []
+    clusters.value.forEach((element) => {
+      if (element.permissions.actions.length > 0) {
+        runtimeStore.addCluster(element)
+      }
+    })
+  } catch (error: any) {
+    if (error instanceof AuthenticationError) {
+      reportAuthenticationError(error)
+    } else {
+      reportOtherError(error)
+    }
+  }
+}
+
+onMounted(() => {
+  getClustersDescriptions()
+})
 </script>
 
 <template>
   <main>
     <section class="bg-slurmweb-light dark:bg-gray-900">
       <div class="flex flex-col h-screen justify-center items-center gap-y-6">
-        <h1 class="w-[50%] text-left text-lg">Select a cluster</h1>
+        <h1 class="lg:w-[60%] px-4 w-full text-left font-medium text-gray-700 text-lg">
+          Select a cluster
+        </h1>
         <ul
           role="list"
-          class="w-[50%] divide-y divide-gray-100 overflow-hidden bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl"
+          class="lg:w-[60%] w-full divide-y divide-gray-100 overflow-hidden bg-white shadow-sm ring-1 ring-gray-900/5 lg:rounded-xl"
         >
           <li
-            v-for="cluster in runtimeStore.availableClusters"
+            v-for="cluster in clusters"
             :key="cluster.name"
-            class="relative flex justify-between gap-x-6 px-4 py-5 hover:bg-gray-50 sm:px-6"
+            :class="[
+              cluster.permissions.actions.length > 0
+                ? 'cursor-pointer hover:bg-gray-50'
+                : 'cursor-not-allowed bg-gray-100',
+              'relative flex justify-between items-center px-4 py-5 h-20  sm:px-6'
+            ]"
+            @click="
+              cluster.permissions.actions.length > 0 &&
+                router.push({ name: 'dashboard', params: { cluster: cluster.name } })
+            "
           >
-            <div class="flex min-w-0 gap-x-4">
-              <div class="min-w-0 flex-auto">
-                <p class="text-sm font-semibold leading-6 text-gray-900">
-                  <RouterLink :to="{ name: 'dashboard', params: { cluster: cluster.name } }">
-                    <span class="absolute inset-x-0 -top-px bottom-0" />
-                    {{ cluster.name }}
-                  </RouterLink>
+            <span class="w-16 text-sm font-semibold leading-6 text-gray-900">
+              <RouterLink :to="{ name: 'dashboard', params: { cluster: cluster.name } }">
+                <span class="inset-x-0 -top-px bottom-0" />
+                {{ cluster.name }}
+              </RouterLink>
+            </span>
+            <span v-if="cluster.stats" class="hidden md:flex text-center">
+              <span class="mt-1 w-20 text-xs leading-5 text-gray-500">
+                <CpuChipIcon class="h-6 w-full" />
+                <p class="w-full">
+                  {{ cluster.stats.resources.nodes }} node{{
+                    cluster.stats.resources.nodes > 1 ? 's' : ''
+                  }}
                 </p>
-                <p class="mt-1 flex text-xs leading-5 text-gray-500">
-                  <a :href="`mailto:${cluster.name}`" class="relative truncate hover:underline">{{
-                    cluster.name
-                  }}</a>
+              </span>
+              <span class="mt-1 w-20 text-xs leading-5 text-gray-500">
+                <PlayCircleIcon class="h-6 w-full" />
+                <p class="w-full">
+                  {{ cluster.stats.jobs.running }} job{{
+                    cluster.stats.jobs.running > 1 ? 's' : ''
+                  }}
                 </p>
-              </div>
-            </div>
+              </span>
+            </span>
             <div class="flex shrink-0 items-center gap-x-4">
               <div class="hidden sm:flex sm:flex-col sm:items-end">
-                <p class="text-sm leading-6 text-gray-900">{{ cluster.name }}</p>
-                <div v-if="cluster.status == 'AVAILABLE'" class="mt-1 flex items-center gap-x-1.5">
+                <div
+                  v-if="cluster.permissions.actions.length > 0"
+                  class="mt-1 flex items-center gap-x-1.5"
+                >
                   <div class="flex-none rounded-full bg-emerald-500/20 p-1">
                     <div class="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                   </div>
-                  <p class="text-xs leading-5 text-gray-500">Online</p>
+                  <p class="text-xs leading-5 text-gray-500">Available</p>
+                  <ChevronRightIcon class="h-5 w-5 flex-none text-gray-400" aria-hidden="true" />
+                </div>
+                <div v-else class="mt-1 flex items-center gap-x-1.5">
+                  <div class="flex-none rounded-full bg-red-500/20 p-1">
+                    <div class="h-1.5 w-1.5 rounded-full bg-red-500" />
+                  </div>
+                  <p class="text-xs leading-5 text-gray-500">Denied</p>
                 </div>
               </div>
-              <ChevronRightIcon class="h-5 w-5 flex-none text-gray-400" aria-hidden="true" />
             </div>
           </li>
         </ul>

@@ -16,7 +16,7 @@ const sortOptions = [
 const emit = defineEmits(['sort'])
 
 function sortSelected(newCriteria: string) {
-  runtimeStore.jobs.view.sort = newCriteria
+  runtimeStore.jobs.sort = newCriteria
   emit('sort')
 }
 </script>
@@ -50,7 +50,7 @@ function sortSelected(newCriteria: string) {
             <a
               @click="sortSelected(option.type)"
               :class="[
-                option.type == runtimeStore.jobs.view.sort
+                option.type == runtimeStore.jobs.sort
                   ? 'font-medium text-gray-900'
                   : 'text-gray-500',
                 active ? 'bg-gray-100' : '',

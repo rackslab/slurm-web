@@ -13,6 +13,7 @@ from racksdb.web.app import RacksDBWebBlueprint
 from . import SlurmwebWebApp
 from ..views import SlurmwebAppRoute
 from ..views import agent as views
+from ..cache import CachingService
 
 logger = logging.getLogger(__name__)
 
@@ -58,4 +59,9 @@ class SlurmwebAppAgent(SlurmwebWebApp, RFLTokenizedRBACWebApp):
             key=self.settings.jwt.key,
             policy=self.settings.policy.definition,
             roles=selected_roles_policy_path,
+        )
+        self.cache = CachingService(
+            host=self.settings.cache.host,
+            port=self.settings.cache.port,
+            password=self.settings.cache.password,
         )

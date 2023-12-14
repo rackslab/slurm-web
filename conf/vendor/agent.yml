@@ -6,6 +6,47 @@ slurmrestd:
     type: path
     default: /var/spool/slurm/restd/slurmrestd.socket
     doc: Path to slurmrestd UNIX socket
+  version:
+    type: str
+    default: '0.0.39'
+    doc: Slurm REST API version
+
+filters:
+  jobs:
+    type: list
+    content: str
+    default:
+    - job_id
+    - user_name
+    - account
+    - job_state
+    - partition
+    doc: |
+      List of jobs fields selected in slurmrestd API, all other fields are
+      filtered out.
+  nodes:
+    type: list
+    content: str
+    default:
+    - name
+    - cpus
+    - cores
+    - real_memory
+    - state
+    - partitions
+    doc: |
+      List of nodes fields selected in slurmrestd API, all other fields are
+      filtered out.
+      jobs:
+  qos:
+    type: list
+    content: str
+    default:
+    - name
+    - description
+    doc: |
+      List of qos fields selected in slurmrestd API, all other fields are
+      filtered out.
 
 service:
   cluster:
@@ -89,3 +130,20 @@ racksdb:
     type: path
     default: /etc/racksdb/extensions.yml
     doc: Path to site-specific RacksDB schema extensions
+
+cache:
+  enabled:
+    type: bool
+    default: true
+    doc: Determine if caching is enabled
+  host:
+    type: str
+    default: localhost
+    doc: Hostname of Redis cache server
+  port:
+    type: int
+    default: 6379
+    doc: TCP port of Redis cache server
+  password:
+    type: str
+    doc: Password to connect to protected Redis server

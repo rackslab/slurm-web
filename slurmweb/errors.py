@@ -15,3 +15,7 @@ class SlurmwebConfigurationError(Exception):
 
 class SlurmwebAuthenticationError(Exception):
     pass
+
+
+class SlurmwebCacheError(Exception):
+    pass

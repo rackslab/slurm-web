@@ -15,6 +15,7 @@ service:
 agents:
   url:
     type: list
+    content: uri
     required: true
     doc: List of Slurm-web agents URL
 

@@ -9,17 +9,25 @@ interface loginIdents {
   password: string
 }
 
-export interface ClusterPermissions {
+export interface ClusterDescription {
   name: string
+  permissions: ClusterPermissions
+  stats?: ClusterStats
+}
+
+interface ClusterPermissions {
   roles: string[]
   actions: string[]
 }
 
-interface GatewayLoginResponse {
-  token: string
+export interface UserDescription {
+  login: string
   fullname: string
+}
+
+interface GatewayLoginResponse extends UserDescription {
+  token: string
   groups: string[]
-  clusters: ClusterPermissions[]
 }
 
 export class ClusterStats {
@@ -38,7 +46,6 @@ export class ClusterStats {
 }
 
 export interface ClusterJob {
-  id: number
   job_id: number
   user_name: string
   account: string
@@ -47,10 +54,9 @@ export interface ClusterJob {
 }
 
 export interface ClusterNode {
-  id: number
   name: string
-  cpus: number
   cores: number
+  cpus: number
   real_memory: number
   state: Array<string>
   partitions: Array<string>
@@ -62,6 +68,12 @@ export interface ClusterQos {
 }
 
 export class AuthenticationError extends Error {
+  constructor(message: string) {
+    super(message)
+  }
+}
+
+export class PermissionError extends Error {
   constructor(message: string) {
     super(message)
   }
@@ -85,6 +97,7 @@ export function useGatewayAPI() {
   const http = useHttp()
   const authStore = useAuthStore()
   const runtimeStore = useRuntimeStore()
+  let controller = new AbortController()
 
   async function requestServer(func: Function): Promise<AxiosResponse> {
     try {
@@ -92,7 +105,13 @@ export function useGatewayAPI() {
     } catch (error: any) {
       if (error.response) {
         /* Server replied with error status code */
-        throw new APIServerError(error.response.status, error.response.data.description)
+        if (error.response.status == 401) {
+          throw new AuthenticationError(error.message)
+        } else if (error.response.status == 403) {
+          throw new PermissionError(error.message)
+        } else {
+          throw new APIServerError(error.response.status, error.response.data.description)
+        }
       } else if (error.request) {
         /* No reply from server */
         throw new RequestError(`Request error: ${error.message}`)
@@ -106,7 +125,8 @@ export function useGatewayAPI() {
   async function getWithToken(resource: string): Promise<any> {
     console.log(`Slurm-web gateway API get with token ${resource}`)
     const config = {
-      headers: { Authorization: `Bearer ${authStore.token}` }
+      headers: { Authorization: `Bearer ${authStore.token}` },
+      signal: controller.signal
     }
     return (
       await requestServer(() => {
@@ -117,9 +137,12 @@ export function useGatewayAPI() {
 
   async function post(resource: string, data: any): Promise<any> {
     console.log(`Slurm-web gateway API post ${resource}`)
+    const config = {
+      signal: controller.signal
+    }
     return (
       await requestServer(() => {
-        return http.post(resource, data)
+        return http.post(resource, data, config)
       })
     ).data
   }
@@ -136,53 +159,35 @@ export function useGatewayAPI() {
     }
   }
 
+  async function clusters(): Promise<Array<ClusterDescription>> {
+    return (await getWithToken(`/clusters`)) as ClusterDescription[]
+  }
+
+  async function users(): Promise<Array<UserDescription>> {
+    return (await getWithToken(`/users`)) as UserDescription[]
+  }
+
   async function stats(cluster: string): Promise<ClusterStats> {
-    try {
-      return (await getWithToken(`/agents/${cluster}/stats`)) as ClusterStats
-    } catch (error: any) {
-      /* Translate 401 APIServerError into AuthenticationError */
-      if (error instanceof APIServerError && error.status == 401) {
-        throw new AuthenticationError(error.message)
-      }
-      throw error
-    }
+    return (await getWithToken(`/agents/${cluster}/stats`)) as ClusterStats
   }
 
   async function jobs(cluster: string): Promise<ClusterJob[]> {
-    try {
-      return (await getWithToken(`/agents/${cluster}/jobs`)) as ClusterJob[]
-    } catch (error: any) {
-      /* Translate 401 APIServerError into AuthenticationError */
-      if (error instanceof APIServerError && error.status == 401) {
-        throw new AuthenticationError(error.message)
-      }
-      throw error
-    }
+    return (await getWithToken(`/agents/${cluster}/jobs`)) as ClusterJob[]
   }
 
   async function nodes(cluster: string): Promise<ClusterNode[]> {
-    try {
-      return (await getWithToken(`/agents/${cluster}/nodes`)) as ClusterNode[]
-    } catch (error: any) {
-      /* Translate 401 APIServerError into AuthenticationError */
-      if (error instanceof APIServerError && error.status == 401) {
-        throw new AuthenticationError(error.message)
-      }
-      throw error
-    }
+    return (await getWithToken(`/agents/${cluster}/nodes`)) as ClusterNode[]
   }
 
   async function qos(cluster: string): Promise<ClusterQos[]> {
-    try {
-      return (await getWithToken(`/agents/${cluster}/qos`)) as ClusterQos[]
-    } catch (error: any) {
-      /* Translate 401 APIServerError into AuthenticationError */
-      if (error instanceof APIServerError && error.status == 401) {
-        throw new AuthenticationError(error.message)
-      }
-      throw error
-    }
+    return (await getWithToken(`/agents/${cluster}/qos`)) as ClusterQos[]
   }
 
-  return { login, stats, jobs, nodes, qos }
+  function abort() {
+    /* Abort all pending requests */
+    controller.abort()
+    controller = new AbortController()
+  }
+
+  return { login, clusters, users, stats, jobs, nodes, qos, abort }
 }

@@ -19,6 +19,8 @@ import secrets
 import atexit
 import shutil
 import time
+import argparse
+import json
 
 import jinja2
 from racksdb import RacksDB
@@ -28,7 +30,8 @@ logger = logging.getLogger(__name__)
 DEV_HOST = "firehpc.dev.rackslab.io"
 
 DEBUG_FLAGS = ["slurmweb", "rfl", "werkzeug", "urllib3"]
-#DEBUG_FLAGS = ["ALL"]
+# DEBUG_FLAGS = ["ALL"]
+
 
 @dataclass
 class PortForward:
@@ -48,7 +51,7 @@ class PortAllocator:
     def allocate(self):
         self.current += 1
         return {
-            key: PortForward(value.remote + self.current, value.local + self.current)
+            key: PortForward(value.remote, value.local + self.current)
             for key, value in self.forwards.items()
         }
 
@@ -56,6 +59,7 @@ class PortAllocator:
 @dataclass
 class ClusterChannel:
     name: str
+    connection: paramiko.client.SSHClient
     forwarder: sshtunnel.SSHTunnelForwarder
     process: subprocess.Popen
 
@@ -104,12 +108,12 @@ class ClusterChannel:
         logger.info("Running command locally: %s", shlex.join(cmd))
         process = subprocess.Popen(cmd)
 
-        return cls(cluster, forwarder, process)
+        return cls(cluster, ssh_client, forwarder, process)
 
-    def stop(self, ssh_client: paramiko.client.SSHClient) -> None:
+    def stop(self) -> None:
         logger.info("Stopping %s remote socat command", self.name)
         cmd = shlex.join(["firehpc", "ssh", f"admin.{self.name}", "killall", "socat"])
-        ssh_client.exec_command(cmd)
+        self.connection.exec_command(cmd)
         logger.info("Stopping %s forwarder", self.name)
         self.forwarder.stop()
         logger.info("Stopping %s socat process", self.name)
@@ -123,6 +127,7 @@ class SlurmwebAgent:
     forwards: dict[str, PortForward]
     service_port: int
     conf_path: Path = None
+    policy_path: Path = None
     process: subprocess.Popen = None
 
     @classmethod
@@ -138,9 +143,44 @@ class SlurmwebAgent:
         channel = ClusterChannel.connect(host, ssh_client, forwards, name, cluster_id)
         return cls(name, channel, forwards, 5013 + cluster_id)
 
-    def render_conf(self, tmpdir: Path, jwt_key_path: Path) -> None:
+
+    def render_policy(self, tmpdir: Path) -> None:
+        environment = jinja2.Environment(loader=jinja2.FileSystemLoader("dev/conf/"))
+        template = environment.get_template("policy.ini.j2")
+        self.policy_path = tmpdir / f"policy-{self.name}.ini"
+        _, stdout, _ = self.channel.connection.exec_command(
+            shlex.join(["firehpc", "status", "--cluster", self.name, "--json"])
+        )
+        cluster_status = json.loads(stdout.read())
+        with open(self.policy_path, "w+") as fh:
+            fh.write(
+                template.render(
+                    cluster=self.name,
+                    users=cluster_status["users"],
+                    groups=cluster_status["groups"],
+                )
+            )
+
+    def render_conf(
+        self, tmpdir: Path, jwt_key_path: Path, cache_enabled: bool
+    ) -> None:
         environment = jinja2.Environment(loader=jinja2.FileSystemLoader("dev/conf/"))
         template = environment.get_template("agent.ini.j2")
+        sftp = self.channel.connection.open_sftp()
+        logger.info("Reading remote redis password for cluster %s", self.name)
+        redis_password = None
+        if cache_enabled:
+            try:
+                with sftp.open(
+                    f".local/state/firehpc/{self.name}/redis/redis.password"
+                ) as fh:
+                    redis_password = fh.read().decode()
+            except FileNotFoundError:
+                logger.warning(
+                    "Remote Redis password file not found for cluster %s, force disabling cache",
+                    self.name,
+                )
+                cache_enabled = False
         self.conf_path = tmpdir / f"agent-{self.name}.ini"
         with open(self.conf_path, "w+") as fh:
             fh.write(
@@ -149,6 +189,10 @@ class SlurmwebAgent:
                     service_port=self.service_port,
                     slurmrestd_socket=f"/tmp/slurmrestd-{self.name}.socket",
                     jwt_key=jwt_key_path,
+                    cache_enabled=cache_enabled,
+                    policy_path=self.policy_path,
+                    redis_port=self.forwards["redis"].local,
+                    redis_password=redis_password,
                 )
             )
 
@@ -166,10 +210,10 @@ class SlurmwebAgent:
         logging.info("Launching Slurm-web agent %s: %s", self.name, shlex.join(cmd))
         self.process = subprocess.Popen(cmd)
 
-    def stop(self, ssh_client: paramiko.client.SSHClient) -> None:
+    def stop(self) -> None:
         logging.info("Stopping slurm-web agent %s", self.name)
         self.process.kill()
-        self.channel.stop(ssh_client)
+        self.channel.stop()
 
 
 @dataclass
@@ -220,6 +264,17 @@ def delete_tmpdir(path: Path):
 def main():
     logging.basicConfig(level=logging.INFO)
 
+    parser = argparse.ArgumentParser(
+        description="Launch Slurm-web development environment"
+    )
+    parser.add_argument(
+        "--no-cache",
+        dest="cache",
+        action="store_false",
+        help="Disable redis cache",
+    )
+    args = parser.parse_args()
+
     # Load cluster list from RacksDB database
     db = RacksDB.load(db="dev/firehpc/racksdb.yml")
 
@@ -247,7 +302,8 @@ def main():
             DEV_HOST, port_allocator, ssh_client, infrastructure.name, cluster_id
         )
         # Generate agent configuration file
-        agent.render_conf(tmpdir, jwt_key_path)
+        agent.render_policy(tmpdir)
+        agent.render_conf(tmpdir, jwt_key_path, args.cache)
         # Launch agent in backgroup
         agent.launch()
         agents.append(agent)
@@ -269,7 +325,7 @@ def main():
         gateway.stop()
         # Stop all cluster agents
         for agent in agents:
-            agent.stop(ssh_client)
+            agent.stop()
         logger.info("Closing SSH connection")
         ssh_client.close()
         logger.info("Stopping development environment tunnals")

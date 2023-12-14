@@ -56,26 +56,57 @@ def login():
     token = current_app.jwt.generate(
         user=user, duration=current_app.settings.jwt.duration
     )
+    return jsonify(
+        result="Authentication successful",
+        token=token,
+        fullname=user.fullname,
+        groups=user.groups,
+    )
+
+
+@check_jwt
+def clusters():
     # get permissions on all agents
     clusters = []
     for agent in current_app.agents.values():
         cluster = {"name": agent.cluster}
-        response = request_agent(agent.cluster, "permissions", token)
+        response = request_agent(agent.cluster, "permissions", request.token)
         if response.status_code != 200:
             logger.error(
                 "Unable to retrieve permissions from cluster %s: %d",
                 agent.cluster,
                 response.status_code,
             )
-        else:
-            cluster.update(response.json())
-            clusters.append(cluster)
+            continue  # skip to next cluster
+
+        permissions = response.json()
+        cluster.update({"permissions": permissions})
+        clusters.append(cluster)
+
+        # If view-stats action is permitted on cluster, enrich response with
+        # cluster stats.
+        if "view-stats" in permissions["actions"]:
+            response = request_agent(agent.cluster, "stats", request.token)
+            if response.status_code != 200:
+                logger.error(
+                    "Unable to retrieve stats from cluster %s: %d",
+                    agent.cluster,
+                    response.status_code,
+                )
+            else:
+                cluster.update({"stats": response.json()})
     return jsonify(
-        result="Authentication successful",
-        token=token,
-        fullname=user.fullname,
-        groups=user.groups,
-        clusters=clusters,
+        clusters,
+    )
+
+
+@check_jwt
+def users():
+    return jsonify(
+        [
+            {"login": user.login, "fullname": user.fullname}
+            for user in current_app.authentifier.users()
+        ]
     )
 
 
@@ -83,10 +114,14 @@ def request_agent(cluster: str, query: str, token: str = None):
     headers = {}
     if token is not None:
         headers = {"Authorization": f"Bearer {token}"}
-    return requests.get(
-        f"{current_app.agents[cluster].url}/{query}",
-        headers=headers,
-    )
+    try:
+        return requests.get(
+            f"{current_app.agents[cluster].url}/{query}",
+            headers=headers,
+        )
+    except requests.exceptions.ConnectionError as err:
+        logger.error("Connection error with agent %s: %s", cluster, str(err))
+        abort(500, f"Connection error: {str(err)}")
 
 
 def proxy_agent(cluster: str, query: str, token: str = None):

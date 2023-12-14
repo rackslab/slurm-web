@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, reactive, watch, computed } from 'vue'
+import { onMounted, onUnmounted, ref, watch, computed } from 'vue'
 import type { Ref } from 'vue'
-import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
+import type { LocationQueryRaw } from 'vue-router'
 import { useRuntimeStore } from '@/stores/runtime'
-import { useGatewayAPI, AuthenticationError } from '@/composables/GatewayAPI'
+import { useGatewayAPI, AuthenticationError, PermissionError } from '@/composables/GatewayAPI'
 import type { ClusterJob } from '@/composables/GatewayAPI'
-import JobsSorter from '@/components/JobsSorter.vue'
-import JobStatusLabel from '@/components/JobStatusLabel.vue'
+import JobsSorter from '@/components/jobs/JobsSorter.vue'
+import JobStatusLabel from '@/components/jobs/JobStatusLabel.vue'
 import ClusterMainLayout from '@/components/ClusterMainLayout.vue'
+import UserFilterSelector from '@/components/jobs/UserFilterSelector.vue'
 
 import {
   Dialog,
@@ -18,8 +20,15 @@ import {
   TransitionChild,
   TransitionRoot
 } from '@headlessui/vue'
-import { XMarkIcon } from '@heroicons/vue/24/outline'
-import { ChevronDownIcon } from '@heroicons/vue/20/solid'
+import { XMarkIcon, PlusSmallIcon } from '@heroicons/vue/24/outline'
+import {
+  ChevronDownIcon,
+  FunnelIcon,
+  BoltIcon,
+  UserIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon
+} from '@heroicons/vue/20/solid'
 
 const props = defineProps({
   cluster: {
@@ -28,48 +37,23 @@ const props = defineProps({
   }
 })
 
-const filters = [
-  {
-    id: 'state',
-    name: 'State',
-    options: [
-      { value: 'completed', label: 'Completed', checked: false },
-      { value: 'running', label: 'Running', checked: false },
-      { value: 'pending', label: 'Pending', checked: true }
-    ]
-  },
-  {
-    id: 'users',
-    name: 'Users',
-    options: [
-      { value: 'white', label: 'White', checked: false },
-      { value: 'beige', label: 'Beige', checked: false },
-      { value: 'blue', label: 'Blue', checked: false }
-    ]
-  },
-  {
-    id: 'accounts',
-    name: 'Accounts',
-    options: [
-      { value: 's', label: 'S', checked: false },
-      { value: 'm', label: 'M', checked: false },
-      { value: 'l', label: 'L', checked: false }
-    ]
-  }
-]
-const activeFilters = [
-  { value: 'objects', label: 'Objects' },
-  { value: 'beige', label: 'color:Beige' }
+const state_filters = [
+  { value: 'completed', label: 'Completed' },
+  { value: 'running', label: 'Running' },
+  { value: 'pending', label: 'Pending' }
 ]
 
 const open = ref(false)
 const route = useRoute()
 
 function computeSortJobs() {
-  console.log(`Computing sorted jobs by ${runtimeStore.jobs.view.sort}`)
+  console.log(`Computing sorted jobs by ${runtimeStore.jobs.sort}`)
   // https://vuejs.org/guide/essentials/list.html#displaying-filtered-sorted-results
-  return [...jobs.value].sort((a, b) => {
-    if (runtimeStore.jobs.view.sort == 'user') {
+  let result = [...jobs.value].filter((job) => {
+    return runtimeStore.jobs.matchesFilters(job)
+  })
+  result = result.sort((a, b) => {
+    if (runtimeStore.jobs.sort == 'user') {
       if (a.user_name > b.user_name) {
         return 1
       }
@@ -77,7 +61,7 @@ function computeSortJobs() {
         return -1
       }
       return 0
-    } else if (runtimeStore.jobs.view.sort == 'state') {
+    } else if (runtimeStore.jobs.sort == 'state') {
       if (a.job_state > b.job_state) {
         return 1
       }
@@ -87,45 +71,91 @@ function computeSortJobs() {
       return 0
     } else {
       // by default, sort by id
-      if (a.id > b.id) {
+      if (a.job_id > b.job_id) {
         return 1
       }
-      if (a.id < b.id) {
+      if (a.job_id < b.job_id) {
         return -1
       }
       return 0
     }
   })
+  return result
 }
 
 const jobs: Ref<Array<ClusterJob>> = ref([])
+const unable: Ref<Boolean> = ref(false)
 const sortedJobs = computed(() => {
   return computeSortJobs()
 })
 
-let interval: number = 0
+const lastpage = computed(() => {
+  return Math.ceil(sortedJobs.value.length / 100)
+})
+const firstjob = computed(() => {
+  return (runtimeStore.jobs.page - 1) * 100
+})
+const lastjob = computed(() => {
+  return Math.min(firstjob.value + 100, sortedJobs.value.length)
+})
+
 const router = useRouter()
 const gateway = useGatewayAPI()
 
 const runtimeStore = useRuntimeStore()
 
-function reportAuthenticationError(error: AuthenticationError) {
+interface ClusterPoller {
+  timeout: number
+  stop: boolean
+}
+
+const pollers: Record<string, ClusterPoller> = {}
+
+function reportAuthenticationError(error: AuthenticationError, cluster: string) {
   runtimeStore.reportError(`Authentication error: ${error.message}`)
   router.push({ name: 'login' })
 }
 
-function reportOtherError(error: Error) {
-  runtimeStore.reportError(error.message)
+function reportPermissionError(error: PermissionError, cluster: string) {
+  runtimeStore.reportError(`Permission error: ${error.message}`)
+  stopClusterJobsPoller(cluster)
+  unable.value = true
+}
+
+function reportOtherError(error: Error, cluster: string) {
+  runtimeStore.reportError(`Server error: ${error.message}`)
+  unable.value = true
+}
+
+function removeStateFilter(state: string) {
+  runtimeStore.jobs.filters.states = runtimeStore.jobs.filters.states.filter(
+    (element) => element != state
+  )
+}
+
+function removeUserFilter(user: string) {
+  runtimeStore.jobs.filters.users = runtimeStore.jobs.filters.users.filter(
+    (element) => element != user
+  )
 }
 
 async function getClusterJobs(cluster: string) {
   try {
+    unable.value = false
     jobs.value = await gateway.jobs(cluster)
   } catch (error: any) {
-    if (error instanceof AuthenticationError) {
-      reportAuthenticationError(error)
-    } else {
-      reportOtherError(error)
+    /*
+     * Skip errors received lately from other clusters, after the view cluster
+     * parameter has changed.
+     */
+    if (cluster == props.cluster) {
+      if (error instanceof AuthenticationError) {
+        reportAuthenticationError(error, cluster)
+      } else if (error instanceof PermissionError) {
+        reportPermissionError(error, cluster)
+      } else {
+        reportOtherError(error, cluster)
+      }
     }
   }
 }
@@ -136,26 +166,32 @@ function sortJobs() {
    * the jobs with the new criteria.
    */
   updateQueryParameters()
-  console.log(`Sorting jobs by ${runtimeStore.jobs.view.sort}`)
+  console.log(`Sorting jobs by ${runtimeStore.jobs.sort}`)
 }
 
-function startClusterJobsPoller(cluster: string) {
-  console.log(`Start jobs poller for cluster ${cluster}`)
-  getClusterJobs(cluster)
-  interval = setInterval(getClusterJobs, 20000, cluster)
+async function startClusterJobsPoller(cluster: string) {
+  console.log(`Polling jobs for cluster ${cluster}`)
+  if (!(cluster in pollers)) {
+    pollers[cluster] = { timeout: -1, stop: false }
+  } else {
+    pollers[cluster].stop = false
+  }
+  await getClusterJobs(cluster)
+  if (cluster == props.cluster && !pollers[cluster].stop) {
+    pollers[cluster].timeout = setTimeout(startClusterJobsPoller, 5000, cluster)
+  }
 }
 
 function stopClusterJobsPoller(cluster: string) {
   console.log(`Stop jobs poller for cluster ${cluster}`)
-  clearInterval(interval)
+  pollers[cluster].stop = true
+  clearTimeout(pollers[cluster].timeout)
+  gateway.abort()
 }
 
 function updateQueryParameters() {
-  /*
-   * If sort criteria is absent from query, redirect to route with current
-   * jobs sorter
-   */
-  router.push({ name: 'jobs', query: { sort: runtimeStore.jobs.view.sort } })
+  console.log('Updating query parameters')
+  router.push({ name: 'jobs', query: runtimeStore.jobs.query() as LocationQueryRaw })
 }
 
 watch(
@@ -168,12 +204,50 @@ watch(
   }
 )
 
+/*
+ * Watch states and users filters in Pinia store to update route query
+ * accordingly.
+ *
+ * This is not explained in Pinia documentation but to watch Pinia store nested
+ * attribute, the solution is to used watch getter. This solution has been found
+ * here: https://stackoverflow.com/a/71937507
+ */
+watch(
+  () => runtimeStore.jobs.filters.users,
+  () => {
+    updateQueryParameters()
+  }
+)
+watch(
+  () => runtimeStore.jobs.filters.states,
+  () => {
+    updateQueryParameters()
+  }
+)
+
 onMounted(() => {
   startClusterJobsPoller(props.cluster)
-  if (route.query.sort) {
-    /* Retrieve the sort criteria from query and update the store */
-    runtimeStore.jobs.view.sort = route.query.sort as string
+  if (['sort', 'states', 'users'].some((parameter) => parameter in route.query)) {
+    if (route.query.sort) {
+      /* Retrieve the sort criteria from query and update the store */
+      runtimeStore.jobs.sort = route.query.sort as string
+    }
+    if (route.query.page) {
+      /* Retrieve the page number from query and update the store */
+      runtimeStore.jobs.page = parseInt(route.query.page as string)
+    }
+    if (route.query.states) {
+      /* Retrieve the states filters from query and update the store */
+      runtimeStore.jobs.filters.states = (route.query.states as string).split(',')
+    }
+    if (route.query.users) {
+      /* Retrieve the users filters from query and update the store */
+      runtimeStore.jobs.filters.users = (route.query.users as string).split(',')
+    }
   } else {
+    /* Route has no query parameter. Update query parameters to match those that
+     * can be defined in runtime store. This typically happens when user define
+     * filters, leave jobs route (eg. in left menu) and comes back. */
     updateQueryParameters()
   }
 })
@@ -215,7 +289,13 @@ onUnmounted(() => {
                 class="relative ml-auto flex h-full w-full max-w-xs flex-col overflow-y-auto bg-white py-4 pb-12 shadow-xl"
               >
                 <div class="flex items-center justify-between px-4">
-                  <h2 class="text-lg font-medium text-gray-900">Filters</h2>
+                  <h2 class="text-lg font-medium text-gray-900">
+                    Filters
+                    <span
+                      class="bg-indigo-100 text-slurmweb ml-3 hidden rounded-full py-0.5 px-2.5 text-xs font-medium md:inline-block"
+                      >{{ sortedJobs.length }}</span
+                    >
+                  </h2>
                   <button
                     type="button"
                     class="-mr-2 flex h-10 w-10 items-center justify-center rounded-md bg-white p-2 text-gray-400"
@@ -230,16 +310,17 @@ onUnmounted(() => {
                 <form class="mt-4">
                   <Disclosure
                     as="div"
-                    v-for="section in filters"
-                    :key="section.name"
-                    class="border-t border-gray-200 px-4 py-6"
+                    class="border-t border-gray-200 border-l-4 border-l-gray-300 px-4 py-6"
                     v-slot="{ open }"
                   >
                     <h3 class="-mx-2 -my-3 flow-root">
                       <DisclosureButton
                         class="flex w-full items-center justify-between bg-white px-2 py-3 text-sm text-gray-400"
                       >
-                        <span class="font-medium text-gray-900">{{ section.name }}</span>
+                        <span class="flex">
+                          <BoltIcon class="h-5 w-5 mr-1" />
+                          <span class="font-medium text-gray-900">State</span>
+                        </span>
                         <span class="ml-6 flex items-center">
                           <ChevronDownIcon
                             :class="[open ? '-rotate-180' : 'rotate-0', 'h-5 w-5 transform']"
@@ -251,25 +332,50 @@ onUnmounted(() => {
                     <DisclosurePanel class="pt-6">
                       <div class="space-y-6">
                         <div
-                          v-for="(option, optionIdx) in section.options"
-                          :key="option.value"
+                          v-for="(state, optionIdx) in state_filters"
+                          :key="state.value"
                           class="flex items-center"
                         >
                           <input
-                            :id="`filter-mobile-${section.id}-${optionIdx}`"
-                            :name="`${section.id}[]`"
-                            :value="option.value"
+                            :id="`filter-mobile-${state.value}-${optionIdx}`"
+                            :name="`state-${state.value}[]`"
+                            :value="state.value"
                             type="checkbox"
-                            :checked="option.checked"
-                            class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            v-model="runtimeStore.jobs.filters.states"
+                            class="h-4 w-4 rounded border-gray-300 text-slurmweb focus:ring-slurmweb"
                           />
                           <label
-                            :for="`filter-mobile-${section.id}-${optionIdx}`"
+                            :for="`filter-mobile-${state.value}-${optionIdx}`"
                             class="ml-3 text-sm text-gray-500"
-                            >{{ option.label }}</label
+                            >{{ state.label }}</label
                           >
                         </div>
                       </div>
+                    </DisclosurePanel>
+                  </Disclosure>
+                  <Disclosure
+                    as="div"
+                    class="border-t border-t-gray-200 border-l-4 border-l-green-600/40 px-4 py-6"
+                    v-slot="{ open }"
+                  >
+                    <h3 class="-mx-2 -my-3 flow-root">
+                      <DisclosureButton
+                        class="flex w-full items-center justify-between bg-white px-2 py-3 text-sm text-gray-400"
+                      >
+                        <span class="flex">
+                          <UserIcon class="h-5 w-5 mr-1" />
+                          <span class="font-medium text-gray-900">Users</span>
+                        </span>
+                        <span class="ml-6 flex items-center">
+                          <ChevronDownIcon
+                            :class="[open ? '-rotate-180' : 'rotate-0', 'h-5 w-5 transform']"
+                            aria-hidden="true"
+                          />
+                        </span>
+                      </DisclosureButton>
+                    </h3>
+                    <DisclosurePanel class="pt-6">
+                      <UserFilterSelector />
                     </DisclosurePanel>
                   </Disclosure>
                 </form>
@@ -279,39 +385,42 @@ onUnmounted(() => {
         </Dialog>
       </TransitionRoot>
 
-      <div class="mx-auto px-4 py-16 sm:px-6 lg:px-8">
-        <h1 class="text-3xl font-bold tracking-tight text-gray-900">Jobs</h1>
-        <p class="mt-4 max-w-xl text-sm text-gray-700">Jobs running on Slurm cluster</p>
+      <div class="mx-auto flex items-center justify-between">
+        <div class="px-4 py-16 sm:px-6 lg:px-8">
+          <h1 class="text-3xl font-bold tracking-tight text-gray-900">Jobs</h1>
+          <p class="mt-4 max-w-xl text-sm font-light text-gray-600">Jobs in cluster queue</p>
+        </div>
+
+        <div class="mt-4 text-gray-600 text-right">
+          <div class="text-5xl font-bold">{{ sortedJobs.length }}</div>
+          <div class="text-sm font-light">job{{ sortedJobs.length > 1 ? 's' : '' }} found</div>
+        </div>
       </div>
 
-      <!-- Filters -->
-      <section
-        v-show="sortedJobs.length"
-        aria-labelledby="filter-heading"
-        class="-mx-4 -my-2 sm:-mx-6 lg:-mx-8"
-      >
+      <section aria-labelledby="filter-heading" class="-mx-4 -my-2 sm:-mx-6 lg:-mx-8">
         <h2 id="filter-heading" class="sr-only">Filters</h2>
 
-        <div class="border-b border-gray-200 bg-white pb-4">
+        <div class="border-gray-200 bg-white pb-4">
           <div class="mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8">
             <JobsSorter @sort="sortJobs" />
 
             <button
               type="button"
-              class="inline-block text-sm font-medium text-gray-700 hover:text-gray-900"
+              class="inline-flex items-center gap-x-1.5 rounded-md bg-slurmweb px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slurmweb-darker focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slurmweb"
               @click="open = true"
             >
-              Filters
+              <PlusSmallIcon class="-ml-0.5 h-5 w-5" aria-hidden="true" />
+              Add filters
             </button>
           </div>
         </div>
 
         <!-- Active filters -->
-        <div class="bg-gray-100">
+        <div v-show="!runtimeStore.jobs.emptyFilters()" class="bg-gray-100">
           <div class="mx-auto px-4 py-3 sm:flex sm:items-center sm:px-6 lg:px-8">
             <h3 class="text-sm font-medium text-gray-500">
-              Filters
-              <span class="sr-only">, active</span>
+              <FunnelIcon class="h-4 w-4 mr-1" />
+              <span class="sr-only">Filters active</span>
             </h3>
 
             <div aria-hidden="true" class="hidden h-5 w-px bg-gray-300 sm:ml-4 sm:block" />
@@ -319,16 +428,36 @@ onUnmounted(() => {
             <div class="mt-2 sm:ml-4 sm:mt-0">
               <div class="-m-1 flex flex-wrap items-center">
                 <span
-                  v-for="activeFilter in activeFilters"
-                  :key="activeFilter.value"
+                  v-for="activeStateFilter in runtimeStore.jobs.filters.states"
+                  :key="activeStateFilter"
                   class="m-1 inline-flex items-center rounded-full border border-gray-200 bg-white py-1.5 pl-3 pr-2 text-sm font-medium text-gray-900"
                 >
-                  <span>{{ activeFilter.label }}</span>
+                  <BoltIcon class="h-4 w-4 mr-1" />
+                  <span>{{ activeStateFilter }}</span>
                   <button
                     type="button"
                     class="ml-1 inline-flex h-4 w-4 flex-shrink-0 rounded-full p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-500"
+                    @click="removeStateFilter(activeStateFilter)"
                   >
-                    <span class="sr-only">Remove filter for {{ activeFilter.label }}</span>
+                    <span class="sr-only">Remove filter for state:{{ activeStateFilter }}</span>
+                    <svg class="h-2 w-2" stroke="currentColor" fill="none" viewBox="0 0 8 8">
+                      <path stroke-linecap="round" stroke-width="1.5" d="M1 1l6 6m0-6L1 7" />
+                    </svg>
+                  </button>
+                </span>
+                <span
+                  v-for="activeUserFilter in runtimeStore.jobs.filters.users"
+                  :key="activeUserFilter"
+                  class="m-1 inline-flex items-center rounded-full border border-gray-200 bg-green-600/40 py-1.5 pl-3 pr-2 text-sm font-medium text-gray-900"
+                >
+                  <UserIcon class="h-4 w-4 mr-1" />
+                  <span>{{ activeUserFilter }}</span>
+                  <button
+                    type="button"
+                    class="ml-1 inline-flex h-4 w-4 flex-shrink-0 rounded-full p-1 text-gray-400 hover:bg-green-600/40 hover:text-gray-500"
+                    @click="removeUserFilter(activeUserFilter)"
+                  >
+                    <span class="sr-only">Remove filter for user:{{ activeUserFilter }}</span>
                     <svg class="h-2 w-2" stroke="currentColor" fill="none" viewBox="0 0 8 8">
                       <path stroke-linecap="round" stroke-width="1.5" d="M1 1l6 6m0-6L1 7" />
                     </svg>
@@ -350,10 +479,10 @@ onUnmounted(() => {
                     scope="col"
                     class="w-12 py-3.5 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 lg:pl-8"
                   >
-                    State
+                    #ID
                   </th>
                   <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                    #ID
+                    State
                   </th>
                   <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                     User
@@ -370,14 +499,14 @@ onUnmounted(() => {
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-200 bg-white">
-                <tr v-for="job in sortedJobs" :key="job.id">
+                <tr v-for="job in sortedJobs" :key="job.job_id">
                   <td
                     class="whitespace-nowrap py-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8"
                   >
-                    <JobStatusLabel :status="job.job_state" />
+                    {{ job.job_id }}
                   </td>
                   <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                    {{ job.job_id }}
+                    <JobStatusLabel :status="job.job_state" />
                   </td>
                   <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                     {{ job.user_name }}
@@ -399,6 +528,98 @@ onUnmounted(() => {
                 </tr>
               </tbody>
             </table>
+            <div
+              class="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6"
+            >
+              <div class="flex flex-1 justify-between sm:hidden">
+                <a
+                  href="#"
+                  class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >Previous</a
+                >
+                <a
+                  href="#"
+                  class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >Next</a
+                >
+              </div>
+              <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                <div>
+                  <p class="text-sm text-gray-700">
+                    Showing
+                    {{ ' ' }}
+                    <span class="font-medium">{{ firstjob }}</span>
+                    {{ ' ' }}
+                    to
+                    {{ ' ' }}
+                    <span class="font-medium">{{ lastjob }}</span>
+                    {{ ' ' }}
+                    of
+                    {{ ' ' }}
+                    <span class="font-medium">{{ sortedJobs.length }}</span>
+                    {{ ' ' }}
+                    results pages:{{ lastpage }} currentpage: {{ runtimeStore.jobs.page }}
+                  </p>
+                </div>
+                <div>
+                  <nav
+                    class="isolate inline-flex -space-x-px rounded-md shadow-sm"
+                    aria-label="Pagination"
+                  >
+                    <a
+                      href="#"
+                      class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                    >
+                      <span class="sr-only">Previous</span>
+                      <ChevronLeftIcon class="h-5 w-5" aria-hidden="true" />
+                    </a>
+                    <!-- Current: "z-10 bg-indigo-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600", Default: "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0" -->
+                    <a
+                      href="#"
+                      aria-current="page"
+                      class="relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                      >1</a
+                    >
+                    <a
+                      href="#"
+                      class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                      >2</a
+                    >
+                    <a
+                      href="#"
+                      class="relative hidden items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 md:inline-flex"
+                      >3</a
+                    >
+                    <span
+                      class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300 focus:outline-offset-0"
+                      >...</span
+                    >
+                    <a
+                      href="#"
+                      class="relative hidden items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 md:inline-flex"
+                      >8</a
+                    >
+                    <a
+                      href="#"
+                      class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                      >9</a
+                    >
+                    <a
+                      href="#"
+                      class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                      >10</a
+                    >
+                    <a
+                      href="#"
+                      class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                    >
+                      <span class="sr-only">Next</span>
+                      <ChevronRightIcon class="h-5 w-5" aria-hidden="true" />
+                    </a>
+                  </nav>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div v-else>No job to display</div>

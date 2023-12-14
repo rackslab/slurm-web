@@ -13,7 +13,9 @@ module.exports = {
         slurmweb: {
           light: '#ccdbe6',
           DEFAULT: '#759ab8',
+          darker: '#6185a3',
           dark: '#486a86',
+          verydark: '#3b5163',
           'font-disabled': '#dbe9f4',
         },
       },

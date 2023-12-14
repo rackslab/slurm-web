@@ -30,7 +30,7 @@ class SlurmwebAppLDAPCheck(SlurmwebGenericApp):
             group_name_attribute=self.settings.ldap.group_name_attribute,
         )
         try:
-            users = self.authentifier.list_users()
+            users = self.authentifier.users(with_groups=True)
             if not len(users):
                 print("No user found in LDAP directory.")
             else:

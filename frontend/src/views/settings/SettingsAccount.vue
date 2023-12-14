@@ -47,11 +47,20 @@ const authStore = useAuthStore()
       </div>
       <div class="mt-6 border-t border-gray-100">
         <dl class="divide-y divide-gray-100">
-          <div v-for="cluster in runtimeStore.availableClusters" :key="cluster.name" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-            <dt class="text-sm font-medium leading-6 text-gray-900">{{cluster.name}}</dt>
+          <div
+            v-for="cluster in runtimeStore.availableClusters"
+            :key="cluster.name"
+            class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0"
+          >
+            <dt class="text-sm font-medium leading-6 text-gray-900">{{ cluster.name }}</dt>
             <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+              Roles :
               <ul class="list-disc">
-                <li v-for="action in cluster.actions.sort()">{{ action }}</li>
+                <li v-for="role in cluster.permissions.roles.sort()">{{ role }}</li>
+              </ul>
+              Actions :
+              <ul class="list-disc">
+                <li v-for="action in cluster.permissions.actions.sort()">{{ action }}</li>
               </ul>
             </dd>
           </div>

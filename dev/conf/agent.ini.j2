@@ -11,8 +11,13 @@ socket={{ slurmrestd_socket }}
 
 [policy]
 definition=conf/vendor/policy.yml
-roles=conf/vendor/policy.conf
+roles={{ policy_path }}
 
 [racksdb]
 db=dev/firehpc/racksdb.yml
 schema=../RacksDB/schema/racksdb.yml
+
+[cache]
+enabled={{ cache_enabled }}
+port={{ redis_port }}
+password={{ redis_password }}
