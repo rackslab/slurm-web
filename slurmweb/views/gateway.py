@@ -143,6 +143,12 @@ def jobs(cluster: str):
 
 @check_jwt
 @validate_cluster
+def job(cluster: str, job: int):
+    return proxy_agent(cluster, f"job/{job}", request.token)
+
+
+@check_jwt
+@validate_cluster
 def nodes(cluster: str):
     return proxy_agent(cluster, "nodes", request.token)
 
@@ -151,3 +157,9 @@ def nodes(cluster: str):
 @validate_cluster
 def qos(cluster: str):
     return proxy_agent(cluster, "qos", request.token)
+
+
+@check_jwt
+@validate_cluster
+def accounts(cluster: str):
+    return proxy_agent(cluster, "accounts", request.token)

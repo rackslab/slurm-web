@@ -7,25 +7,31 @@ import type { ClusterDescription, ClusterJob } from '@/composables/GatewayAPI'
 interface JobsViewFilters {
   states: string[]
   users: string[]
+  accounts: string[]
 }
 
 interface JobsQueryParameters {
   sort?: string
   states?: string
   users?: string
+  accounts?: string
   page?: number
 }
 
 export class JobsViewSettings {
   sort: string = 'id'
   page: number = 1
-  filters: JobsViewFilters = { states: [], users: [] }
+  filters: JobsViewFilters = { states: [], users: [], accounts: [] }
 
   restoreSortDefault(): void {
     this.sort = 'id'
   }
   emptyFilters(): boolean {
-    return this.filters.states.length == 0 && this.filters.users.length == 0
+    return (
+      this.filters.states.length == 0 &&
+      this.filters.users.length == 0 &&
+      this.filters.accounts.length == 0
+    )
   }
   matchesFilters(job: ClusterJob): boolean {
     if (this.emptyFilters()) {
@@ -49,10 +55,19 @@ export class JobsViewSettings {
         return false
       }
     }
+    if (this.filters.accounts.length != 0) {
+      if (
+        !this.filters.accounts.some((account) => {
+          return account.toLocaleLowerCase() == job.account.toLocaleLowerCase()
+        })
+      ) {
+        return false
+      }
+    }
     return true
   }
   query(): JobsQueryParameters {
-    let result: JobsQueryParameters = {}
+    const result: JobsQueryParameters = {}
     if (this.page != 1) {
       result.page = this.page
     }
@@ -64,6 +79,9 @@ export class JobsViewSettings {
     }
     if (this.filters.users.length > 0) {
       result.users = this.filters.users.join()
+    }
+    if (this.filters.accounts.length > 0) {
+      result.accounts = this.filters.accounts.join()
     }
     return result
   }

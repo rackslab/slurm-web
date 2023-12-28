@@ -46,7 +46,7 @@ export function useSlurmAPI(http: AxiosInstance, token: string | null) {
         headers: { Authorization: `Bearer ${token}` }
       }
       try {
-        let response = await http.get(resource, config)
+        const response = await http.get(resource, config)
         return response.data
       } catch (error: any) {
         // The request was made and the server responded with a status code
@@ -67,11 +67,11 @@ export function useSlurmAPI(http: AxiosInstance, token: string | null) {
     }
   }
   async function nodes(): Promise<Array<SlurmNode>> {
-    let response = (await slurmGet('/api/slurm/v0.0.39/nodes')) as SlurmAPINodesResult
+    const response = (await slurmGet('/api/slurm/v0.0.39/nodes')) as SlurmAPINodesResult
     return response.nodes
   }
   async function jobs(): Promise<Array<SlurmJob>> {
-    let response = (await slurmGet('/api/slurm/v0.0.39/jobs')) as SlurmAPIJobsResult
+    const response = (await slurmGet('/api/slurm/v0.0.39/jobs')) as SlurmAPIJobsResult
     return response.jobs
   }
 

@@ -10,6 +10,7 @@ import JobsSorter from '@/components/jobs/JobsSorter.vue'
 import JobStatusLabel from '@/components/jobs/JobStatusLabel.vue'
 import ClusterMainLayout from '@/components/ClusterMainLayout.vue'
 import UserFilterSelector from '@/components/jobs/UserFilterSelector.vue'
+import AccountFilterSelector from '@/components/jobs/AccountFilterSelector.vue'
 
 import {
   Dialog,
@@ -20,12 +21,13 @@ import {
   TransitionChild,
   TransitionRoot
 } from '@headlessui/vue'
-import { XMarkIcon, PlusSmallIcon } from '@heroicons/vue/24/outline'
+import { XMarkIcon, PlusSmallIcon, FolderArrowDownIcon } from '@heroicons/vue/24/outline'
 import {
   ChevronDownIcon,
   FunnelIcon,
   BoltIcon,
   UserIcon,
+  UsersIcon,
   ChevronLeftIcon,
   ChevronRightIcon
 } from '@heroicons/vue/20/solid'
@@ -90,7 +92,7 @@ const sortedJobs = computed(() => {
 })
 
 const lastpage = computed(() => {
-  return Math.ceil(sortedJobs.value.length / 100)
+  return Math.max(Math.ceil(sortedJobs.value.length / 100), 1)
 })
 const firstjob = computed(() => {
   return (runtimeStore.jobs.page - 1) * 100
@@ -136,6 +138,12 @@ function removeStateFilter(state: string) {
 function removeUserFilter(user: string) {
   runtimeStore.jobs.filters.users = runtimeStore.jobs.filters.users.filter(
     (element) => element != user
+  )
+}
+
+function removeAccountFilter(account: string) {
+  runtimeStore.jobs.filters.accounts = runtimeStore.jobs.filters.accounts.filter(
+    (element) => element != account
   )
 }
 
@@ -213,28 +221,89 @@ watch(
  * here: https://stackoverflow.com/a/71937507
  */
 watch(
+  () => runtimeStore.jobs.filters.states,
+  () => {
+    updateQueryParameters()
+  }
+)
+watch(
   () => runtimeStore.jobs.filters.users,
   () => {
     updateQueryParameters()
   }
 )
 watch(
-  () => runtimeStore.jobs.filters.states,
+  () => runtimeStore.jobs.filters.accounts,
   () => {
     updateQueryParameters()
   }
 )
+watch(
+  () => runtimeStore.jobs.page,
+  () => {
+    updateQueryParameters()
+  }
+)
+/*
+ * Set current page to last page if last page changes to a value lower than
+ * current page.
+ */
+watch(lastpage, (new_last_page) => {
+  console.log(`lastpage changed ${new_last_page}`)
+  runtimeStore.jobs.page = Math.min(runtimeStore.jobs.page, new_last_page)
+  if (route.query.page && parseInt(route.query.page as string) > new_last_page) {
+    updateQueryParameters()
+  }
+})
+
+interface Page {
+  id: number
+  ellipsis: boolean
+}
+
+function jobsPages(): Page[] {
+  let result: Page[] = Array()
+  let ellipsis = false
+  range(1, lastpage.value, 1).forEach((page) => {
+    if (
+      page < 3 ||
+      page > lastpage.value - 2 ||
+      (page >= runtimeStore.jobs.page - 1 && page <= runtimeStore.jobs.page + 1)
+    ) {
+      ellipsis = false
+      result.push({ id: page, ellipsis: false })
+    } else if (ellipsis === false) {
+      ellipsis = true
+      result.push({ id: page, ellipsis: true })
+    }
+  })
+  return result
+}
+
+const range = (start: number, stop: number, step: number) =>
+  Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + i * step)
 
 onMounted(() => {
   startClusterJobsPoller(props.cluster)
-  if (['sort', 'states', 'users'].some((parameter) => parameter in route.query)) {
+  if (
+    ['sort', 'states', 'users', 'accounts', 'page'].some((parameter) => parameter in route.query)
+  ) {
     if (route.query.sort) {
       /* Retrieve the sort criteria from query and update the store */
       runtimeStore.jobs.sort = route.query.sort as string
     }
     if (route.query.page) {
-      /* Retrieve the page number from query and update the store */
+      /* Retrieve the page number from query and update the store. If the
+       * lastpage is lower than the page query, set store to lastpage and update
+       * query parameters. */
+      //console.log(`lastpage ${lastpage.value}`)
       runtimeStore.jobs.page = parseInt(route.query.page as string)
+      /*
+      if (lastpage.value < runtimeStore.jobs.page) {
+        runtimeStore.jobs.page = lastpage.value
+        updateQueryParameters()
+      }
+      */
     }
     if (route.query.states) {
       /* Retrieve the states filters from query and update the store */
@@ -243,6 +312,10 @@ onMounted(() => {
     if (route.query.users) {
       /* Retrieve the users filters from query and update the store */
       runtimeStore.jobs.filters.users = (route.query.users as string).split(',')
+    }
+    if (route.query.accounts) {
+      /* Retrieve the account filters from query and update the store */
+      runtimeStore.jobs.filters.accounts = (route.query.accounts as string).split(',')
     }
   } else {
     /* Route has no query parameter. Update query parameters to match those that
@@ -308,17 +381,15 @@ onUnmounted(() => {
 
                 <!-- Filters -->
                 <form class="mt-4">
-                  <Disclosure
-                    as="div"
-                    class="border-t border-gray-200 border-l-4 border-l-gray-300 px-4 py-6"
-                    v-slot="{ open }"
-                  >
+                  <Disclosure as="div" class="border-t border-gray-200 px-4 py-6" v-slot="{ open }">
                     <h3 class="-mx-2 -my-3 flow-root">
                       <DisclosureButton
                         class="flex w-full items-center justify-between bg-white px-2 py-3 text-sm text-gray-400"
                       >
                         <span class="flex">
-                          <BoltIcon class="h-5 w-5 mr-1" />
+                          <BoltIcon
+                            class="h-8 w-8 -mt-1 -ml-1 mr-2 bg-gray-600 text-white rounded-full p-2"
+                          />
                           <span class="font-medium text-gray-900">State</span>
                         </span>
                         <span class="ml-6 flex items-center">
@@ -355,7 +426,7 @@ onUnmounted(() => {
                   </Disclosure>
                   <Disclosure
                     as="div"
-                    class="border-t border-t-gray-200 border-l-4 border-l-green-600/40 px-4 py-6"
+                    class="border-t border-t-gray-200 px-4 py-6"
                     v-slot="{ open }"
                   >
                     <h3 class="-mx-2 -my-3 flow-root">
@@ -363,7 +434,9 @@ onUnmounted(() => {
                         class="flex w-full items-center justify-between bg-white px-2 py-3 text-sm text-gray-400"
                       >
                         <span class="flex">
-                          <UserIcon class="h-5 w-5 mr-1" />
+                          <UserIcon
+                            class="h-8 w-8 -mt-1 -ml-1 mr-2 bg-emerald-500 text-white rounded-full p-2"
+                          />
                           <span class="font-medium text-gray-900">Users</span>
                         </span>
                         <span class="ml-6 flex items-center">
@@ -376,6 +449,33 @@ onUnmounted(() => {
                     </h3>
                     <DisclosurePanel class="pt-6">
                       <UserFilterSelector />
+                    </DisclosurePanel>
+                  </Disclosure>
+                  <Disclosure
+                    as="div"
+                    class="border-t border-t-gray-200 px-4 py-6"
+                    v-slot="{ open }"
+                  >
+                    <h3 class="-mx-2 -my-3 flow-root">
+                      <DisclosureButton
+                        class="flex w-full items-center justify-between bg-white px-2 py-3 text-sm text-gray-400"
+                      >
+                        <span class="flex">
+                          <UsersIcon
+                            class="h-8 w-8 -mt-1 -ml-1 mr-2 bg-yellow-500 text-white rounded-full p-2"
+                          />
+                          <span class="font-medium text-gray-900">Accounts</span>
+                        </span>
+                        <span class="ml-6 flex items-center">
+                          <ChevronDownIcon
+                            :class="[open ? '-rotate-180' : 'rotate-0', 'h-5 w-5 transform']"
+                            aria-hidden="true"
+                          />
+                        </span>
+                      </DisclosureButton>
+                    </h3>
+                    <DisclosurePanel class="pt-6">
+                      <AccountFilterSelector :cluster="props.cluster" />
                     </DisclosurePanel>
                   </Disclosure>
                 </form>
@@ -430,13 +530,13 @@ onUnmounted(() => {
                 <span
                   v-for="activeStateFilter in runtimeStore.jobs.filters.states"
                   :key="activeStateFilter"
-                  class="m-1 inline-flex items-center rounded-full border border-gray-200 bg-white py-1.5 pl-3 pr-2 text-sm font-medium text-gray-900"
+                  class="m-1 inline-flex items-center rounded-full border border-gray-200 bg-gray-600 text-white py-1.5 pl-3 pr-2 text-sm font-medium"
                 >
                   <BoltIcon class="h-4 w-4 mr-1" />
                   <span>{{ activeStateFilter }}</span>
                   <button
                     type="button"
-                    class="ml-1 inline-flex h-4 w-4 flex-shrink-0 rounded-full p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-500"
+                    class="ml-1 inline-flex h-4 w-4 flex-shrink-0 rounded-full p-1 text-gray-400 hover:bg-gray-700 hover:text-gray-500"
                     @click="removeStateFilter(activeStateFilter)"
                   >
                     <span class="sr-only">Remove filter for state:{{ activeStateFilter }}</span>
@@ -448,16 +548,34 @@ onUnmounted(() => {
                 <span
                   v-for="activeUserFilter in runtimeStore.jobs.filters.users"
                   :key="activeUserFilter"
-                  class="m-1 inline-flex items-center rounded-full border border-gray-200 bg-green-600/40 py-1.5 pl-3 pr-2 text-sm font-medium text-gray-900"
+                  class="m-1 inline-flex items-center rounded-full border border-gray-200 bg-emerald-500 text-white py-1.5 pl-3 pr-2 text-sm font-medium"
                 >
                   <UserIcon class="h-4 w-4 mr-1" />
                   <span>{{ activeUserFilter }}</span>
                   <button
                     type="button"
-                    class="ml-1 inline-flex h-4 w-4 flex-shrink-0 rounded-full p-1 text-gray-400 hover:bg-green-600/40 hover:text-gray-500"
+                    class="ml-1 inline-flex h-4 w-4 flex-shrink-0 rounded-full p-1 text-emerald-600 hover:bg-emerald-600 hover:text-emerald-700"
                     @click="removeUserFilter(activeUserFilter)"
                   >
                     <span class="sr-only">Remove filter for user:{{ activeUserFilter }}</span>
+                    <svg class="h-2 w-2" stroke="currentColor" fill="none" viewBox="0 0 8 8">
+                      <path stroke-linecap="round" stroke-width="1.5" d="M1 1l6 6m0-6L1 7" />
+                    </svg>
+                  </button>
+                </span>
+                <span
+                  v-for="activeAccountFilter in runtimeStore.jobs.filters.accounts"
+                  :key="activeAccountFilter"
+                  class="m-1 inline-flex items-center rounded-full border border-gray-200 bg-yellow-500 text-white py-1.5 pl-3 pr-2 text-sm font-medium"
+                >
+                  <UsersIcon class="h-4 w-4 mr-1" />
+                  <span>{{ activeAccountFilter }}</span>
+                  <button
+                    type="button"
+                    class="ml-1 inline-flex h-4 w-4 flex-shrink-0 rounded-full p-1 text-yellow-600 hover:bg-yellow-600 hover:text-yellow-700"
+                    @click="removeAccountFilter(activeAccountFilter)"
+                  >
+                    <span class="sr-only">Remove filter for account:{{ activeAccountFilter }}</span>
                     <svg class="h-2 w-2" stroke="currentColor" fill="none" viewBox="0 0 8 8">
                       <path stroke-linecap="round" stroke-width="1.5" d="M1 1l6 6m0-6L1 7" />
                     </svg>
@@ -493,13 +611,19 @@ onUnmounted(() => {
                   <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                     Partition
                   </th>
-                  <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-6 lg:pr-8">
-                    <span class="sr-only">Edit</span>
+                  <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                    QOS
+                  </th>
+                  <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                    Reason
+                  </th>
+                  <th scope="col" class="max-w-fit py-3.5 pl-3 pr-4 sm:pr-6 lg:pr-8">
+                    <span class="sr-only">View</span>
                   </th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-200 bg-white">
-                <tr v-for="job in sortedJobs" :key="job.job_id">
+                <tr v-for="job in sortedJobs.slice(firstjob, lastjob)" :key="job.job_id">
                   <td
                     class="whitespace-nowrap py-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8"
                   >
@@ -517,13 +641,24 @@ onUnmounted(() => {
                   <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                     {{ job.partition }}
                   </td>
+                  <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                    {{ job.qos }}
+                  </td>
+                  <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                    <template v-if="job.state_reason != 'None'">
+                      {{ job.state_reason }}
+                    </template>
+                  </td>
                   <td
-                    class="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 lg:pr-8"
+                    class="whitespace-nowrap max-w-fit py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 lg:pr-8"
                   >
-                    <a href="#" class="text-indigo-600 hover:text-indigo-900">
-                      Edit
+                    <RouterLink
+                      :to="{ name: 'job', params: { cluster: cluster, id: job.job_id } }"
+                      class="text-slurmweb hover:text-slurmweb-dark"
+                    >
+                      View
                       <span class="sr-only">, {{ job.job_id }}</span>
-                    </a>
+                    </RouterLink>
                   </td>
                 </tr>
               </tbody>
@@ -557,65 +692,61 @@ onUnmounted(() => {
                     of
                     {{ ' ' }}
                     <span class="font-medium">{{ sortedJobs.length }}</span>
-                    {{ ' ' }}
-                    results pages:{{ lastpage }} currentpage: {{ runtimeStore.jobs.page }}
+                    {{ ' ' }} jobs
                   </p>
                 </div>
                 <div>
                   <nav
+                    v-if="lastpage > 1"
                     class="isolate inline-flex -space-x-px rounded-md shadow-sm"
                     aria-label="Pagination"
                   >
-                    <a
-                      href="#"
-                      class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                    <button
+                      :class="[
+                        runtimeStore.jobs.page == 1
+                          ? 'text-gray-100 bg-gray-100 cursor-default'
+                          : 'text-gray-400 hover:bg-gray-50',
+                        'relative inline-flex items-center rounded-l-md px-2 py-2  ring-1 ring-inset ring-gray-300  focus:z-20 focus:outline-offset-0'
+                      ]"
+                      @click="runtimeStore.jobs.page > 1 && (runtimeStore.jobs.page -= 1)"
                     >
                       <span class="sr-only">Previous</span>
                       <ChevronLeftIcon class="h-5 w-5" aria-hidden="true" />
-                    </a>
-                    <!-- Current: "z-10 bg-indigo-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600", Default: "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0" -->
-                    <a
-                      href="#"
-                      aria-current="page"
-                      class="relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                      >1</a
-                    >
-                    <a
-                      href="#"
-                      class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
-                      >2</a
-                    >
-                    <a
-                      href="#"
-                      class="relative hidden items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 md:inline-flex"
-                      >3</a
-                    >
-                    <span
-                      class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300 focus:outline-offset-0"
-                      >...</span
-                    >
-                    <a
-                      href="#"
-                      class="relative hidden items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 md:inline-flex"
-                      >8</a
-                    >
-                    <a
-                      href="#"
-                      class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
-                      >9</a
-                    >
-                    <a
-                      href="#"
-                      class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
-                      >10</a
-                    >
-                    <a
-                      href="#"
-                      class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                    </button>
+                    <template v-for="page in jobsPages()" :key="page.id">
+                      <button
+                        v-if="page.ellipsis"
+                        aria-current="page"
+                        class="bg-white text-gray-600 ring-1 ring-inset ring-gray-300 relative z-10 inline-flex items-center px-4 py-2 text-xs font-semibold focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                      >
+                        …
+                      </button>
+                      <button
+                        v-else
+                        aria-current="page"
+                        :class="[
+                          page.id == runtimeStore.jobs.page
+                            ? 'bg-slurmweb text-white'
+                            : 'bg-white text-black ring-1 ring-inset ring-gray-300 hover:bg-gray-50',
+                          'relative z-10 inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600'
+                        ]"
+                        @click="runtimeStore.jobs.page = page.id"
+                      >
+                        {{ page.id }}
+                      </button>
+                    </template>
+                    <button
+                      :class="[
+                        runtimeStore.jobs.page == lastpage
+                          ? 'text-gray-100 bg-gray-100 cursor-default'
+                          : 'text-gray-400 hover:bg-gray-50',
+                        'relative inline-flex items-center rounded-r-md px-2 py-2 ring-1 ring-inset ring-gray-300  focus:z-20 focus:outline-offset-0'
+                      ]"
+                      @click="runtimeStore.jobs.page < lastpage && (runtimeStore.jobs.page += 1)"
                     >
                       <span class="sr-only">Next</span>
                       <ChevronRightIcon class="h-5 w-5" aria-hidden="true" />
-                    </a>
+                    </button>
                   </nav>
                 </div>
               </div>

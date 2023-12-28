@@ -39,7 +39,9 @@ class SlurmwebExecLDAPCheck:
         )
         parser.add_argument(
             "--conf-defs",
-            help="Path to configuration settings definition file (default: %(default)s)",
+            help=(
+                "Path to configuration settings definition file (default: %(default)s)",
+            ),
             default=SlurmwebAppGateway.SETTINGS_DEFINITION,
             type=Path,
         )

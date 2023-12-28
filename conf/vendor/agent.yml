@@ -20,7 +20,9 @@ filters:
     - user_name
     - account
     - job_state
+    - state_reason
     - partition
+    - qos
     doc: |
       List of jobs fields selected in slurmrestd API, all other fields are
       filtered out.
@@ -46,6 +48,14 @@ filters:
     - description
     doc: |
       List of qos fields selected in slurmrestd API, all other fields are
+      filtered out.
+  accounts:
+    type: list
+    content: str
+    default:
+    - name
+    doc: |
+      List of accounts fields selected in slurmrestd API, all other fields are
       filtered out.
 
 service:

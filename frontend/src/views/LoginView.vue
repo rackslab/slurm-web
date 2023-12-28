@@ -19,8 +19,8 @@ const runtimeStore = useRuntimeStore()
 
 function reportAuthenticationError(message: string) {
   runtimeStore.reportError(`Authentication error: ${message}`)
-
   setTrueFor(shakeLoginButton, 300)
+  disableSubmission.value = false
 }
 
 function setTrueFor(reference: Ref<boolean>, timeout: number) {
@@ -42,8 +42,8 @@ async function submitLogin() {
     return
   }
   try {
-    let response = await gateway.login({ user: username.value, password: password.value })
     disableSubmission.value = true
+    let response = await gateway.login({ user: username.value, password: password.value })
     authStore.login(response.token, username.value, response.fullname, response.groups)
   } catch (error: any) {
     if (error instanceof AuthenticationError) {
@@ -99,10 +99,33 @@ async function submitLogin() {
               <button
                 type="submit"
                 :disabled="disableSubmission"
-                class="w-full text-white bg-slurmweb hover:bg-slurmweb-dark disabled:bg-slate-300 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
+                class="w-full text-white bg-slurmweb hover:bg-slurmweb-dark disabled:bg-slate-300 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
                 :class="{ 'animate-horizontal-shake': shakeLoginButton }"
               >
-                Sign in
+                <template v-if="disableSubmission">
+                  <svg
+                    class="animate-spin h-4 w-4 mx-2 -ml-2 text-white inline-block"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Authenticating
+                </template>
+                <template v-else> Sign in </template>
               </button>
             </form>
           </div>

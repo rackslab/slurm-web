@@ -4,6 +4,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+from typing import Union
 import logging
 
 from flask import Response, current_app, jsonify, abort, request
@@ -58,15 +59,18 @@ def slurmrest(query):
     return result
 
 
-def filter_fields(items, selection):
-    for item in items:
-        for key in list(item.keys()):
-            if key not in selection:
-                del item[key]
+def filter_fields(items, selection: Union[list[str], None]):
+    if selection is not None:
+        for item in items:
+            for key in list(item.keys()):
+                if key not in selection:
+                    del item[key]
     return items
 
 
-def _cached_data(cache_key: str, query: str, result_key: str, filters: list[str]):
+def _cached_data(
+    cache_key: str, query: str, result_key: str, filters: Union[list[str], None]
+):
     if not current_app.settings.cache.enabled:
         return filter_fields(slurmrest(query)[result_key], filters)
     try:
@@ -89,6 +93,15 @@ def _cached_jobs():
     )
 
 
+def _cached_job(job):
+    return _cached_data(
+        f"job-{job}",
+        f"/slurm/v{current_app.settings.slurmrestd.version}/job/{job}",
+        "jobs",
+        None,
+    )[0]
+
+
 def _cached_nodes():
     return _cached_data(
         "nodes",
@@ -104,6 +117,15 @@ def _cached_qos():
         f"/slurmdb/v{current_app.settings.slurmrestd.version}/qos",
         "qos",
         current_app.settings.filters.qos,
+    )
+
+
+def _cached_accounts():
+    return _cached_data(
+        "accounts",
+        f"/slurmdb/v{current_app.settings.slurmrestd.version}/accounts",
+        "accounts",
+        current_app.settings.filters.accounts,
     )
 
 
@@ -134,6 +156,11 @@ def jobs():
     return jsonify(_cached_jobs())
 
 
+@rbac_action("view-jobs")
+def job(job: int):
+    return jsonify(_cached_job(job))
+
+
 @rbac_action("view-nodes")
 def nodes():
     return jsonify(_cached_nodes())
@@ -142,3 +169,8 @@ def nodes():
 @rbac_action("view-qos")
 def qos():
     return jsonify(_cached_qos())
+
+
+@rbac_action("view-accounts")
+def accounts():
+    return jsonify(_cached_accounts())

@@ -25,6 +25,10 @@ export interface UserDescription {
   fullname: string
 }
 
+export interface AccountDescription {
+  name: string
+}
+
 interface GatewayLoginResponse extends UserDescription {
   token: string
   groups: string[]
@@ -50,7 +54,9 @@ export interface ClusterJob {
   user_name: string
   account: string
   job_state: string
+  state_reason: string
   partition: string
+  qos: string
 }
 
 export interface ClusterNode {
@@ -96,7 +102,6 @@ class RequestError extends Error {
 export function useGatewayAPI() {
   const http = useHttp()
   const authStore = useAuthStore()
-  const runtimeStore = useRuntimeStore()
   let controller = new AbortController()
 
   async function requestServer(func: Function): Promise<AxiosResponse> {
@@ -175,6 +180,10 @@ export function useGatewayAPI() {
     return (await getWithToken(`/agents/${cluster}/jobs`)) as ClusterJob[]
   }
 
+  async function job(cluster: string, job: number): Promise<ClusterJob> {
+    return (await getWithToken(`/agents/${cluster}/job/${job}`)) as ClusterJob
+  }
+
   async function nodes(cluster: string): Promise<ClusterNode[]> {
     return (await getWithToken(`/agents/${cluster}/nodes`)) as ClusterNode[]
   }
@@ -183,11 +192,15 @@ export function useGatewayAPI() {
     return (await getWithToken(`/agents/${cluster}/qos`)) as ClusterQos[]
   }
 
+  async function accounts(cluster: string): Promise<Array<AccountDescription>> {
+    return (await getWithToken(`/agents/${cluster}/accounts`)) as AccountDescription[]
+  }
+
   function abort() {
     /* Abort all pending requests */
     controller.abort()
     controller = new AbortController()
   }
 
-  return { login, clusters, users, stats, jobs, nodes, qos, abort }
+  return { login, clusters, users, stats, jobs, job, nodes, qos, accounts, abort }
 }

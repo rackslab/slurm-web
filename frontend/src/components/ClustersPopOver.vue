@@ -51,8 +51,18 @@ const runtimeStore = useRuntimeStore()
                   v-if="cluster.permissions.actions.length > 0"
                   class="mt-1 flex items-center justify-evenly gap-x-1.5"
                 >
-                  <div class="flex-none rounded-full bg-emerald-500/20 p-1">
-                    <div class="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  <div
+                    :class="[
+                      cluster.stats ? 'bg-emerald-500/20' : 'bg-orange-500/20',
+                      'flex-none rounded-full  p-1'
+                    ]"
+                  >
+                    <div
+                      :class="[
+                        cluster.stats ? 'bg-emerald-500' : 'bg-orange-500',
+                        'h-1.5 w-1.5 rounded-full bg-emerald-500'
+                      ]"
+                    />
                   </div>
                 </div>
 

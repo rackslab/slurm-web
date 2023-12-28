@@ -21,6 +21,8 @@ import shutil
 import time
 import argparse
 import json
+import socket
+import sys
 
 import jinja2
 from racksdb import RacksDB
@@ -31,6 +33,14 @@ DEV_HOST = "firehpc.dev.rackslab.io"
 
 DEBUG_FLAGS = ["slurmweb", "rfl", "werkzeug", "urllib3"]
 # DEBUG_FLAGS = ["ALL"]
+
+
+def runcmd(cmd: list[str]) -> subprocess.Popen:
+    try:
+        return subprocess.Popen(cmd)
+    except FileNotFoundError:
+        logger.error("Command not found: %s", shlex.join(cmd))
+        sys.exit(1)
 
 
 @dataclass
@@ -106,8 +116,7 @@ class ClusterChannel:
             f"TCP-CONNECT:localhost:{forwards['slurmrestd'].local}",
         ]
         logger.info("Running command locally: %s", shlex.join(cmd))
-        process = subprocess.Popen(cmd)
-
+        process = runcmd(cmd)
         return cls(cluster, ssh_client, forwarder, process)
 
     def stop(self) -> None:
@@ -142,7 +151,6 @@ class SlurmwebAgent:
         forwards = port_allocator.allocate()
         channel = ClusterChannel.connect(host, ssh_client, forwards, name, cluster_id)
         return cls(name, channel, forwards, 5013 + cluster_id)
-
 
     def render_policy(self, tmpdir: Path) -> None:
         environment = jinja2.Environment(loader=jinja2.FileSystemLoader("dev/conf/"))
@@ -208,7 +216,7 @@ class SlurmwebAgent:
             ]
         )
         logging.info("Launching Slurm-web agent %s: %s", self.name, shlex.join(cmd))
-        self.process = subprocess.Popen(cmd)
+        self.process = runcmd(cmd)
 
     def stop(self) -> None:
         logging.info("Stopping slurm-web agent %s", self.name)
@@ -249,7 +257,7 @@ class SlurmwebGateway:
             ]
         )
         logging.info("Launching Slurm-web gateway: %s", shlex.join(cmd))
-        self.process = subprocess.Popen(cmd)
+        self.process = runcmd(cmd)
 
     def stop(self):
         logging.info("Stopping slurm-web gateway")
@@ -282,8 +290,11 @@ def main():
     ssh_client = paramiko.SSHClient()
     ssh_client.load_host_keys(Path("~/.ssh/known_hosts").expanduser())
     logger.info("Connecting to development host %s", DEV_HOST)
-    ssh_client.connect(DEV_HOST)
-
+    try:
+        ssh_client.connect(DEV_HOST)
+    except socket.gaierror as err:
+        logger.error("Unable to get address of %s: %s", DEV_HOST, str(err))
+        sys.exit(1)
     # Create temporary directory and register its automatic deletion at exit
     tmpdir = Path(tempfile.mkdtemp(prefix="slurm-web-dev"))
     atexit.register(delete_tmpdir, tmpdir)

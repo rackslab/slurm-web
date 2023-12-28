@@ -29,8 +29,10 @@ class SlurmwebAppAgent(SlurmwebWebApp, RFLTokenizedRBACWebApp):
         SlurmwebAppRoute("/permissions", views.permissions),
         SlurmwebAppRoute("/stats", views.stats),
         SlurmwebAppRoute("/jobs", views.jobs),
+        SlurmwebAppRoute("/job/<int:job>", views.job),
         SlurmwebAppRoute("/nodes", views.nodes),
         SlurmwebAppRoute("/qos", views.qos),
+        SlurmwebAppRoute("/accounts", views.accounts),
     }
 
     def __init__(self, args):

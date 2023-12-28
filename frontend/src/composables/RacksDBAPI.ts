@@ -7,7 +7,7 @@ export function useRacksDBAPI(http: AxiosInstance) {
   async function racksDBGet(resource: string): Promise<ArrayBuffer> {
     console.log(`RacksDB get ${resource}`)
     try {
-      let response = await http.get(resource, {
+      const response = await http.get(resource, {
         responseType: 'arraybuffer'
       })
       return response.data

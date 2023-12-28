@@ -8,13 +8,14 @@ import {
   AuthenticationError,
   type ClusterDescription
 } from '@/composables/GatewayAPI'
-import { ChevronRightIcon } from '@heroicons/vue/20/solid'
+import { ChevronRightIcon, XCircleIcon } from '@heroicons/vue/20/solid'
 import { CpuChipIcon, PlayCircleIcon } from '@heroicons/vue/24/outline'
 
 const runtimeStore = useRuntimeStore()
 const gateway = useGatewayAPI()
 const router = useRouter()
 const clusters: Ref<Array<ClusterDescription>> = ref([])
+const loaded: Ref<Boolean> = ref(false)
 const unable: Ref<Boolean> = ref(false)
 
 function reportAuthenticationError(error: AuthenticationError) {
@@ -36,6 +37,7 @@ async function getClustersDescriptions() {
         runtimeStore.addCluster(element)
       }
     })
+    loaded.value = true
   } catch (error: any) {
     if (error instanceof AuthenticationError) {
       reportAuthenticationError(error)
@@ -52,14 +54,25 @@ onMounted(() => {
 
 <template>
   <main>
-    <section class="bg-slurmweb-light dark:bg-gray-900">
-      <div class="flex flex-col h-screen justify-center items-center gap-y-6">
-        <h1 class="lg:w-[60%] px-4 w-full text-left font-medium text-gray-700 text-lg">
-          Select a cluster
-        </h1>
+    <section
+      class="flex h-screen justify-center items-center gap-y-6 bg-slurmweb-light dark:bg-gray-900"
+    >
+      <div v-if="unable" class="lg:w-[60%] w-full rounded-md bg-red-50 p-4">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <XCircleIcon class="h-5 w-5 text-red-400" aria-hidden="true" />
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800">Unable to load cluster list</h3>
+            <p class="mt-2 text-sm text-red-700">Try to refresh…</p>
+          </div>
+        </div>
+      </div>
+      <div v-else-if="loaded" class="lg:w-[60%] w-full flex flex-col">
+        <h1 class="flex px-4 text-left font-medium text-gray-700 text-lg">Select a cluster</h1>
         <ul
           role="list"
-          class="lg:w-[60%] w-full divide-y divide-gray-100 overflow-hidden bg-white shadow-sm ring-1 ring-gray-900/5 lg:rounded-xl"
+          class="divide-y divide-gray-100 overflow-hidden bg-white shadow-sm ring-1 ring-gray-900/5 lg:rounded-xl"
         >
           <li
             v-for="cluster in clusters"
@@ -102,25 +115,38 @@ onMounted(() => {
             <div class="flex shrink-0 items-center gap-x-4">
               <div class="hidden sm:flex sm:flex-col sm:items-end">
                 <div
-                  v-if="cluster.permissions.actions.length > 0"
+                  v-if="cluster.permissions.actions.length == 0"
                   class="mt-1 flex items-center gap-x-1.5"
                 >
+                  <div class="flex-none rounded-full bg-red-500/20 p-1">
+                    <div class="h-1.5 w-1.5 rounded-full bg-red-500" />
+                  </div>
+                  <p class="text-xs leading-5 text-gray-500">Denied</p>
+                </div>
+                <div v-else-if="!('stats' in cluster)" class="mt-1 flex items-center gap-x-1.5">
+                  <div class="flex-none rounded-full bg-orange-500/20 p-1">
+                    <div class="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                  </div>
+                  <p class="text-xs leading-5 text-gray-500">Ongoing issue</p>
+                  <ChevronRightIcon class="h-5 w-5 flex-none text-gray-400" aria-hidden="true" />
+                </div>
+                <div v-else class="mt-1 flex items-center gap-x-1.5">
                   <div class="flex-none rounded-full bg-emerald-500/20 p-1">
                     <div class="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                   </div>
                   <p class="text-xs leading-5 text-gray-500">Available</p>
                   <ChevronRightIcon class="h-5 w-5 flex-none text-gray-400" aria-hidden="true" />
                 </div>
-                <div v-else class="mt-1 flex items-center gap-x-1.5">
-                  <div class="flex-none rounded-full bg-red-500/20 p-1">
-                    <div class="h-1.5 w-1.5 rounded-full bg-red-500" />
-                  </div>
-                  <p class="text-xs leading-5 text-gray-500">Denied</p>
-                </div>
               </div>
             </div>
           </li>
         </ul>
+      </div>
+      <div
+        v-else
+        class="flex items-center justify-center lg:w-[60%] w-full animate-pulse rounded-xl text-gray-600 text-sm bg-slate-200 h-24"
+      >
+        Loading clusters…
       </div>
     </section>
   </main>

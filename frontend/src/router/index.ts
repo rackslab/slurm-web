@@ -9,6 +9,7 @@ import SettingsErrorsView from '@/views/settings/SettingsErrors.vue'
 import SettingsAccountView from '@/views/settings/SettingsAccount.vue'
 import ClustersView from '@/views/ClustersView.vue'
 import JobsView from '@/views/JobsView.vue'
+import JobView from '@/views/Job.vue'
 import ResourcesView from '@/views/ResourcesView.vue'
 import QosView from '@/views/QosView.vue'
 import ReservationsView from '@/views/ReservationsView.vue'
@@ -73,6 +74,12 @@ const router = createRouter({
       path: '/:cluster/jobs',
       name: 'jobs',
       component: JobsView,
+      props: true
+    },
+    {
+      path: '/:cluster/job/:id',
+      name: 'job',
+      component: JobView,
       props: true
     },
     {

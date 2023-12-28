@@ -40,8 +40,10 @@ class SlurmwebAppGateway(SlurmwebWebApp, RFLTokenizedWebApp):
         SlurmwebAppRoute("/users", views.users),
         SlurmwebAppRoute("/agents/<cluster>/stats", views.stats),
         SlurmwebAppRoute("/agents/<cluster>/jobs", views.jobs),
+        SlurmwebAppRoute("/agents/<cluster>/job/<int:job>", views.job),
         SlurmwebAppRoute("/agents/<cluster>/nodes", views.nodes),
         SlurmwebAppRoute("/agents/<cluster>/qos", views.qos),
+        SlurmwebAppRoute("/agents/<cluster>/accounts", views.accounts),
     }
 
     def __init__(self, args):
