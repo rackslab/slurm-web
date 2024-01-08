@@ -24,8 +24,58 @@ filters:
     - partition
     - qos
     doc: |
-      List of jobs fields selected in slurmrestd API, all other fields are
-      filtered out.
+      List of jobs fields selected in slurmrestd API when retrieving a list of
+      jobs, all other fields arefiltered out.
+  acctjob:
+    type: list
+    content: str
+    default:
+    - association
+    - comment
+    - derived_exit_code
+    - exit_code
+    - group
+    - name
+    - nodes
+    - partition
+    - priority
+    - qos
+    - required
+    - script
+    - state
+    - steps
+    - submit_line
+    - time
+    - tres
+    - used_gres
+    - user
+    - wckey
+    - working_directory
+    doc: |
+      List of slurmdbd job fields selected in slurmrestd API when retrieving a
+      unique job, all other fields are filtered out.
+  ctldjob:
+    type: list
+    content: str
+    default:
+    - accrue_time
+    - batch_flag
+    - command
+    - cpus
+    - current_working_directory
+    - exclusive
+    - last_sched_evaluation
+    - node_count
+    - partition
+    - standard_error
+    - standard_input
+    - standard_output
+    - state_reason
+    - tasks
+    - tres_req_str
+    doc: |
+      List of slurmctld job fields selected in slurmrestd API when retrieving a
+      unique job, all other fields are filtered out.
   nodes:
     type: list
     content: str

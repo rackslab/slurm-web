@@ -113,6 +113,10 @@ class RuntimeError {
   }
 }
 
+export interface RuntimeStore {
+  reportError: CallableFunction
+}
+
 export const useRuntimeStore = defineStore('runtime', () => {
   const navigation: Ref<string> = ref('home')
   const routePath: Ref<string> = ref('/')

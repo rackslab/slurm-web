@@ -59,6 +59,82 @@ export interface ClusterJob {
   qos: string
 }
 
+export interface ClusterJobTRES {
+  count: number
+  id: number
+  name: string
+  type: string
+}
+
+export interface ClusterOptionalNumber {
+  infinite: boolean
+  number: number
+  set: boolean
+}
+
+export interface ClusterPreciseTime {
+  seconds: number
+  microseconds: number
+}
+
+export interface ClusterJobTime {
+  elapsed: number
+  eligible: number
+  end: number
+  limit: ClusterOptionalNumber
+  start: number
+  submission: number
+  suspended: number
+  system: ClusterPreciseTime
+  total: ClusterPreciseTime
+  user: ClusterPreciseTime
+}
+
+export interface ClusterJobStep {
+  step: { id: { job_id: number; step_id: string }; name: string }
+}
+
+export interface ClusterJobExitCode {
+  return_code: number
+  status: string
+}
+
+export interface ClusterIndividualJob {
+  accrue_time: number
+  association: { account: string; cluster: string; partition: string; user: string }
+  batch_flag: boolean
+  command: string
+  comment: { administrator: string; job: string; system: string }
+  cpus: ClusterOptionalNumber
+  current_working_directory: string
+  derived_exit_code: ClusterJobExitCode
+  exclusive: string[]
+  exit_code: ClusterJobExitCode
+  group: string
+  last_sched_evaluation: number
+  name: string
+  node_count: ClusterOptionalNumber
+  nodes: string
+  partition: string
+  priority: ClusterOptionalNumber
+  qos: string
+  script: string
+  standard_error: string
+  standard_input: string
+  standard_output: string
+  state: { current: string; reason: string }
+  steps: ClusterJobStep[]
+  submit_line: string
+  tasks: ClusterOptionalNumber
+  time: ClusterJobTime
+  tres: { allocated: ClusterJobTRES[]; requested: ClusterJobTRES[] }
+  tres_req_str: string
+  used_gres: string
+  user: string
+  wckey: { flags: string[]; wckey: string }
+  working_directory: string
+}
+
 export interface ClusterNode {
   name: string
   cores: number
@@ -98,6 +174,8 @@ class RequestError extends Error {
     super(message)
   }
 }
+
+export type GatewayAPIKey = 'stats' | 'jobs' | 'job' | 'nodes' | 'qos' | 'accounts'
 
 export function useGatewayAPI() {
   const http = useHttp()
@@ -198,6 +276,7 @@ export function useGatewayAPI() {
 
   function abort() {
     /* Abort all pending requests */
+    console.log('Aborting requests')
     controller.abort()
     controller = new AbortController()
   }

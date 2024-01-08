@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch, computed } from 'vue'
-import type { Ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import type { LocationQueryRaw } from 'vue-router'
 import { useRuntimeStore } from '@/stores/runtime'
-import { useGatewayAPI, AuthenticationError, PermissionError } from '@/composables/GatewayAPI'
+import { useClusterDataPoller } from '@/composables/DataPoller'
 import type { ClusterJob } from '@/composables/GatewayAPI'
 import JobsSorter from '@/components/jobs/JobsSorter.vue'
 import JobStatusLabel from '@/components/jobs/JobStatusLabel.vue'
@@ -47,46 +46,48 @@ const state_filters = [
 
 const open = ref(false)
 const route = useRoute()
+const { data, unable } = useClusterDataPoller<ClusterJob[]>('jobs', 5000, props)
 
 function computeSortJobs() {
   console.log(`Computing sorted jobs by ${runtimeStore.jobs.sort}`)
-  // https://vuejs.org/guide/essentials/list.html#displaying-filtered-sorted-results
-  let result = [...jobs.value].filter((job) => {
-    return runtimeStore.jobs.matchesFilters(job)
-  })
-  result = result.sort((a, b) => {
-    if (runtimeStore.jobs.sort == 'user') {
-      if (a.user_name > b.user_name) {
-        return 1
+  if (data.value) {
+    // https://vuejs.org/guide/essentials/list.html#displaying-filtered-sorted-results
+    let result = [...data.value].filter((job) => {
+      return runtimeStore.jobs.matchesFilters(job)
+    })
+    result = result.sort((a, b) => {
+      if (runtimeStore.jobs.sort == 'user') {
+        if (a.user_name > b.user_name) {
+          return 1
+        }
+        if (a.user_name < b.user_name) {
+          return -1
+        }
+        return 0
+      } else if (runtimeStore.jobs.sort == 'state') {
+        if (a.job_state > b.job_state) {
+          return 1
+        }
+        if (a.job_state < b.job_state) {
+          return -1
+        }
+        return 0
+      } else {
+        // by default, sort by id
+        if (a.job_id > b.job_id) {
+          return 1
+        }
+        if (a.job_id < b.job_id) {
+          return -1
+        }
+        return 0
       }
-      if (a.user_name < b.user_name) {
-        return -1
-      }
-      return 0
-    } else if (runtimeStore.jobs.sort == 'state') {
-      if (a.job_state > b.job_state) {
-        return 1
-      }
-      if (a.job_state < b.job_state) {
-        return -1
-      }
-      return 0
-    } else {
-      // by default, sort by id
-      if (a.job_id > b.job_id) {
-        return 1
-      }
-      if (a.job_id < b.job_id) {
-        return -1
-      }
-      return 0
-    }
-  })
-  return result
+    })
+    return result
+  } else {
+    return []
+  }
 }
-
-const jobs: Ref<Array<ClusterJob>> = ref([])
-const unable: Ref<Boolean> = ref(false)
 const sortedJobs = computed(() => {
   return computeSortJobs()
 })
@@ -102,32 +103,8 @@ const lastjob = computed(() => {
 })
 
 const router = useRouter()
-const gateway = useGatewayAPI()
 
 const runtimeStore = useRuntimeStore()
-
-interface ClusterPoller {
-  timeout: number
-  stop: boolean
-}
-
-const pollers: Record<string, ClusterPoller> = {}
-
-function reportAuthenticationError(error: AuthenticationError, cluster: string) {
-  runtimeStore.reportError(`Authentication error: ${error.message}`)
-  router.push({ name: 'login' })
-}
-
-function reportPermissionError(error: PermissionError, cluster: string) {
-  runtimeStore.reportError(`Permission error: ${error.message}`)
-  stopClusterJobsPoller(cluster)
-  unable.value = true
-}
-
-function reportOtherError(error: Error, cluster: string) {
-  runtimeStore.reportError(`Server error: ${error.message}`)
-  unable.value = true
-}
 
 function removeStateFilter(state: string) {
   runtimeStore.jobs.filters.states = runtimeStore.jobs.filters.states.filter(
@@ -147,27 +124,6 @@ function removeAccountFilter(account: string) {
   )
 }
 
-async function getClusterJobs(cluster: string) {
-  try {
-    unable.value = false
-    jobs.value = await gateway.jobs(cluster)
-  } catch (error: any) {
-    /*
-     * Skip errors received lately from other clusters, after the view cluster
-     * parameter has changed.
-     */
-    if (cluster == props.cluster) {
-      if (error instanceof AuthenticationError) {
-        reportAuthenticationError(error, cluster)
-      } else if (error instanceof PermissionError) {
-        reportPermissionError(error, cluster)
-      } else {
-        reportOtherError(error, cluster)
-      }
-    }
-  }
-}
-
 function sortJobs() {
   /*
    * Triggered by sort emit of JobsSorter component to update route and resort
@@ -177,40 +133,10 @@ function sortJobs() {
   console.log(`Sorting jobs by ${runtimeStore.jobs.sort}`)
 }
 
-async function startClusterJobsPoller(cluster: string) {
-  console.log(`Polling jobs for cluster ${cluster}`)
-  if (!(cluster in pollers)) {
-    pollers[cluster] = { timeout: -1, stop: false }
-  } else {
-    pollers[cluster].stop = false
-  }
-  await getClusterJobs(cluster)
-  if (cluster == props.cluster && !pollers[cluster].stop) {
-    pollers[cluster].timeout = setTimeout(startClusterJobsPoller, 5000, cluster)
-  }
-}
-
-function stopClusterJobsPoller(cluster: string) {
-  console.log(`Stop jobs poller for cluster ${cluster}`)
-  pollers[cluster].stop = true
-  clearTimeout(pollers[cluster].timeout)
-  gateway.abort()
-}
-
 function updateQueryParameters() {
   console.log('Updating query parameters')
   router.push({ name: 'jobs', query: runtimeStore.jobs.query() as LocationQueryRaw })
 }
-
-watch(
-  () => props.cluster,
-  (newCluster, oldCluster) => {
-    stopClusterJobsPoller(oldCluster)
-    console.log(`Updating jobs for cluster ${newCluster}`)
-    jobs.value = []
-    startClusterJobsPoller(newCluster)
-  }
-)
 
 /*
  * Watch states and users filters in Pinia store to update route query
@@ -284,7 +210,6 @@ const range = (start: number, stop: number, step: number) =>
   Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + i * step)
 
 onMounted(() => {
-  startClusterJobsPoller(props.cluster)
   if (
     ['sort', 'states', 'users', 'accounts', 'page'].some((parameter) => parameter in route.query)
   ) {
@@ -323,10 +248,6 @@ onMounted(() => {
      * filters, leave jobs route (eg. in left menu) and comes back. */
     updateQueryParameters()
   }
-})
-
-onUnmounted(() => {
-  stopClusterJobsPoller(props.cluster)
 })
 </script>
 
@@ -588,7 +509,8 @@ onUnmounted(() => {
       </section>
 
       <div class="mt-8 flow-root">
-        <div v-if="sortedJobs.length" class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+        <div v-if="unable">Unable to get jobs</div>
+        <div v-else-if="sortedJobs.length" class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div class="inline-block min-w-full py-2 align-middle">
             <table class="min-w-full divide-y divide-gray-300">
               <thead>

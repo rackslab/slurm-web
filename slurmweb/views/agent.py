@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from typing import Union
+from typing import Union, Callable, List, Any, Dict
 import logging
 
 from flask import Response, current_app, jsonify, abort, request
@@ -12,7 +12,7 @@ import requests
 from rfl.web.tokens import rbac_action, check_jwt
 
 from ..version import get_version
-from ..errors import SlurmwebCacheError
+from ..errors import SlurmwebCacheError, SlurmwebRestdError
 from . import SlurmrestdUnixAdapter
 
 
@@ -39,8 +39,7 @@ def permissions():
     )
 
 
-def slurmrest(query):
-
+def slurmrest(query, key, handle_errors=True):
     session = requests.Session()
     prefix = "http+unix://slurmrestd/"
     session.mount(prefix, SlurmrestdUnixAdapter(current_app.settings.slurmrestd.socket))
@@ -51,32 +50,46 @@ def slurmrest(query):
         abort(500, f"Unable to connect to slurmrestd: {err}")
     result = response.json()
     if len(result["errors"]):
-        logger.error("slurmrestd query %s errors: %s", query, result["errors"])
-        abort(500, f"slurmrestd errors: {str(result['errors'])}")
+        if handle_errors:
+            logger.error("slurmrestd query %s errors: %s", query, result["errors"])
+            abort(500, f"slurmrestd errors: {str(result['errors'])}")
+        else:
+            error = result["errors"][0]
+            raise SlurmwebRestdError(
+                error["error"],
+                error["error_number"],
+                error["description"],
+                error["source"],
+            )
     if len(result["warnings"]):
         logger.warning("slurmrestd query %s warnings: %s", query, result["warnings"])
-        # abort(500, f"slurmrestd warnings: {str(result['warnings'])}")
-    return result
+    return result[key]
 
 
-def filter_fields(items, selection: Union[list[str], None]):
+def filter_item_fields(item: Dict, selection: Union[list[str]]):
+    for key in list(item.keys()):
+        if key not in selection:
+            del item[key]
+
+
+def filter_fields(selection: Union[list[str], None], func: Callable, *args: List[Any]):
+    items = func(*args)
     if selection is not None:
-        for item in items:
-            for key in list(item.keys()):
-                if key not in selection:
-                    del item[key]
+        if isinstance(items, list):
+            for item in items:
+                filter_item_fields(item, selection)
+        else:
+            filter_item_fields(items, selection)
     return items
 
 
-def _cached_data(
-    cache_key: str, query: str, result_key: str, filters: Union[list[str], None]
-):
+def _cached_data(cache_key: str, func: Callable, *args: List[Any]):
     if not current_app.settings.cache.enabled:
-        return filter_fields(slurmrest(query)[result_key], filters)
+        return func(*args)
     try:
         data = current_app.cache.get(cache_key)
         if data is None:
-            data = filter_fields(slurmrest(query)[result_key], filters)
+            data = func(*args)
             current_app.cache.put(cache_key, data)
         return data
     except SlurmwebCacheError as err:
@@ -87,45 +100,82 @@ def _cached_data(
 def _cached_jobs():
     return _cached_data(
         "jobs",
+        filter_fields,
+        current_app.settings.filters.jobs,
+        slurmrest,
         f"/slurm/v{current_app.settings.slurmrestd.version}/jobs",
         "jobs",
-        current_app.settings.filters.jobs,
     )
+
+
+def _get_job(job):
+    try:
+        result = filter_fields(
+            current_app.settings.filters.acctjob,
+            slurmrest,
+            f"/slurmdb/v{current_app.settings.slurmrestd.version}/job/{job}",
+            "jobs",
+        )[0]
+    except IndexError:
+        abort(404, f"Job {job} not found")
+    # try to enrich result with additional fields from slurmctld
+    query = f"/slurm/v{current_app.settings.slurmrestd.version}/job/{job}"
+    try:
+        result.update(
+            filter_fields(
+                current_app.settings.filters.ctldjob,
+                slurmrest,
+                query,
+                "jobs",
+                False,
+            )[0]
+        )
+    except SlurmwebRestdError as err:
+        if err.error != 2017:
+            logger.error("slurmrestd query %s errors: %s", query, err)
+            abort(500, f"slurmrestd errors: {str(err)}")
+        # pass the error, the job is just not available in ctld queue
+    return result
 
 
 def _cached_job(job):
     return _cached_data(
         f"job-{job}",
-        f"/slurm/v{current_app.settings.slurmrestd.version}/job/{job}",
-        "jobs",
-        None,
-    )[0]
+        _get_job,
+        job,
+    )
 
 
 def _cached_nodes():
     return _cached_data(
         "nodes",
+        filter_fields,
+        current_app.settings.filters.nodes,
+        slurmrest,
         f"/slurm/v{current_app.settings.slurmrestd.version}/nodes",
         "nodes",
-        current_app.settings.filters.nodes,
     )
 
 
 def _cached_qos():
     return _cached_data(
         "qos",
+        filter_fields,
+        current_app.settings.filters.qos,
+        slurmrest,
         f"/slurmdb/v{current_app.settings.slurmrestd.version}/qos",
         "qos",
-        current_app.settings.filters.qos,
     )
 
 
 def _cached_accounts():
     return _cached_data(
         "accounts",
+        filter_fields,
+        current_app.settings.filters.accounts,
+        slurmrest,
         f"/slurmdb/v{current_app.settings.slurmrestd.version}/accounts",
         "accounts",
-        current_app.settings.filters.accounts,
     )
 
 

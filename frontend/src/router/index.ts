@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, type RouteLocation } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useRuntimeStore } from '@/stores/runtime'
 import DashboardView from '@/views/DashboardView.vue'
@@ -80,7 +80,10 @@ const router = createRouter({
       path: '/:cluster/job/:id',
       name: 'job',
       component: JobView,
-      props: true
+      props: (route: RouteLocation) => ({
+        cluster: route.params.cluster,
+        id: parseInt(route.params.id as string)
+      })
     },
     {
       path: '/:cluster/resources',

@@ -1,6 +1,10 @@
 <script setup lang="ts">
 const props = defineProps({
-  status: String
+  status: String,
+  large: {
+    type: Boolean,
+    default: false
+  }
 })
 
 interface JobLabelColors {
@@ -31,7 +35,8 @@ function getStatusColor(status: string): JobLabelColors {
 <template>
   <span
     :class="[
-      'inline-flex items-center gap-x-1.5 rounded-md px-2 py-1 text-xs font-medium',
+      props.large ? 'max-h-10 text-sm' : 'max-h-6 text-xs',
+      'inline-flex items-center gap-x-1.5 rounded-md px-2 py-1 font-medium',
       getStatusColor(props.status as string).span
     ]"
   >
