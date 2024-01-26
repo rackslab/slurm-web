@@ -1,8 +1,8 @@
 import { useHttp } from '@/plugins/http'
-import router from '@/router'
 import { useAuthStore } from '@/stores/auth'
-import { useRuntimeStore } from '@/stores/runtime'
-import type { AxiosResponse } from 'axios'
+import type { ResponseType, AxiosResponse, AxiosRequestConfig } from 'axios'
+import { AuthenticationError, PermissionError, APIServerError, RequestError } from '@/composables/HTTPErrors'
+import { resolveTransitionHooks } from 'vue'
 
 interface loginIdents {
   user: string
@@ -149,31 +149,8 @@ export interface ClusterQos {
   description: string
 }
 
-export class AuthenticationError extends Error {
-  constructor(message: string) {
-    super(message)
-  }
-}
-
-export class PermissionError extends Error {
-  constructor(message: string) {
-    super(message)
-  }
-}
-
-class APIServerError extends Error {
-  status: number
-  constructor(status: number, message: string) {
-    super(message)
-    this.status = status
-  }
-}
-
-class RequestError extends Error {
-  constructor(message: string) {
-    super(message)
-  }
-}
+export type RacksDBAPIImage = ImageBitmapSource
+export type RacksDBAPIResult = RacksDBAPIImage
 
 export type GatewayAPIKey = 'stats' | 'jobs' | 'job' | 'nodes' | 'qos' | 'accounts'
 
@@ -181,6 +158,17 @@ export function useGatewayAPI() {
   const http = useHttp()
   const authStore = useAuthStore()
   let controller = new AbortController()
+
+  function requestConfig(withToken: boolean = true, responseType: ResponseType = "json"): AxiosRequestConfig {
+    let config: AxiosRequestConfig = {
+      responseType: responseType,
+      signal: controller.signal
+    }
+    if (withToken === true) {
+      config.headers = { Authorization: `Bearer ${authStore.token}` }
+    }
+    return config
+  }
 
   async function requestServer(func: Function): Promise<AxiosResponse> {
     try {
@@ -205,29 +193,22 @@ export function useGatewayAPI() {
     }
   }
 
-  async function getWithToken(resource: string): Promise<any> {
-    console.log(`Slurm-web gateway API get with token ${resource}`)
-    const config = {
-      headers: { Authorization: `Bearer ${authStore.token}` },
-      signal: controller.signal
-    }
+  async function get<CType>(resource: string, withToken: boolean = true, responseType: ResponseType = "json"): Promise<CType> {
+    console.log(`Slurm-web gateway API get ${resource}`)
     return (
       await requestServer(() => {
-        return http.get(resource, config)
+        return http.get(resource, requestConfig(withToken, responseType))
       })
-    ).data
+    ).data as CType
   }
 
-  async function post(resource: string, data: any): Promise<any> {
+  async function post<CType>(resource: string, data: any, withToken: boolean = true, responseType: ResponseType = "json"): Promise<CType> {
     console.log(`Slurm-web gateway API post ${resource}`)
-    const config = {
-      signal: controller.signal
-    }
     return (
       await requestServer(() => {
-        return http.post(resource, data, config)
+        return http.post(resource, data, requestConfig(withToken, responseType))
       })
-    ).data
+    ).data as CType
   }
 
   async function login(idents: loginIdents): Promise<GatewayLoginResponse> {
@@ -243,35 +224,41 @@ export function useGatewayAPI() {
   }
 
   async function clusters(): Promise<Array<ClusterDescription>> {
-    return (await getWithToken(`/clusters`)) as ClusterDescription[]
+    return await get<ClusterDescription[]>(`/clusters`)
   }
 
   async function users(): Promise<Array<UserDescription>> {
-    return (await getWithToken(`/users`)) as UserDescription[]
+    return await get<UserDescription[]>(`/users`)
   }
 
   async function stats(cluster: string): Promise<ClusterStats> {
-    return (await getWithToken(`/agents/${cluster}/stats`)) as ClusterStats
+    return await get<ClusterStats>(`/agents/${cluster}/stats`)
   }
 
   async function jobs(cluster: string): Promise<ClusterJob[]> {
-    return (await getWithToken(`/agents/${cluster}/jobs`)) as ClusterJob[]
+    return await get<ClusterJob[]>(`/agents/${cluster}/jobs`)
   }
 
   async function job(cluster: string, job: number): Promise<ClusterJob> {
-    return (await getWithToken(`/agents/${cluster}/job/${job}`)) as ClusterJob
+    return await get<ClusterJob>(`/agents/${cluster}/job/${job}`)
   }
 
   async function nodes(cluster: string): Promise<ClusterNode[]> {
-    return (await getWithToken(`/agents/${cluster}/nodes`)) as ClusterNode[]
+    return await get<ClusterNode[]>(`/agents/${cluster}/nodes`)
   }
 
   async function qos(cluster: string): Promise<ClusterQos[]> {
-    return (await getWithToken(`/agents/${cluster}/qos`)) as ClusterQos[]
+    return await get<ClusterQos[]>(`/agents/${cluster}/qos`)
   }
 
   async function accounts(cluster: string): Promise<Array<AccountDescription>> {
-    return (await getWithToken(`/agents/${cluster}/accounts`)) as AccountDescription[]
+    return await get<AccountDescription[]>(`/agents/${cluster}/accounts`)
+  }
+
+  async function infrastructureImagePng(cluster: string): Promise<RacksDBAPIImage> {
+    return new Blob([
+      await post<ArrayBuffer>(`/agents/${cluster}/racksdb/draw/infrastructure/${cluster}.png`, {}, false, "arraybuffer")
+    ]) as RacksDBAPIImage
   }
 
   function abort() {
@@ -281,5 +268,5 @@ export function useGatewayAPI() {
     controller = new AbortController()
   }
 
-  return { login, clusters, users, stats, jobs, job, nodes, qos, accounts, abort }
+  return { login, clusters, users, stats, jobs, job, nodes, qos, accounts, infrastructureImagePng, abort }
 }

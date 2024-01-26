@@ -1,7 +1,7 @@
 import { ref, onUnmounted, onMounted, watch } from 'vue'
 import type { Ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { AuthenticationError, PermissionError } from '@/composables/GatewayAPI'
+import { AuthenticationError, PermissionError } from '@/composables/HTTPErrors'
 import { useGatewayAPI } from '@/composables/GatewayAPI'
 import type { GatewayAPIKey } from '@/composables/GatewayAPI'
 import { useRuntimeStore } from '@/stores/runtime'
@@ -20,6 +20,7 @@ export function useClusterDataPoller<Type>(
 ) {
   const data: Ref<Type | undefined> = ref()
   const unable: Ref<boolean> = ref(false)
+  const loaded: Ref<boolean> = ref(false)
   let _stop: boolean = false
   const router = useRouter()
   const gateway = useGatewayAPI()
@@ -51,6 +52,7 @@ export function useClusterDataPoller<Type>(
     try {
       unable.value = false
       data.value = (await gateway[callback](props.cluster, ...otherProps())) as Type
+      loaded.value = true
     } catch (error: any) {
       /*
        * Skip errors received lately from other clusters, after the view cluster
@@ -90,6 +92,7 @@ export function useClusterDataPoller<Type>(
       stop(oldCluster)
       console.log(`Updating ${callback} poller from cluster ${oldCluster} to ${newCluster}`)
       data.value = undefined
+      loaded.value = false
       start(newCluster)
     }
   )
@@ -101,5 +104,5 @@ export function useClusterDataPoller<Type>(
     stop(props.cluster)
   })
 
-  return { data, unable }
+  return { data, unable, loaded }
 }

@@ -55,11 +55,11 @@ const authStore = useAuthStore()
             <dt class="text-sm font-medium leading-6 text-gray-900">{{ cluster.name }}</dt>
             <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
               Roles :
-              <ul class="list-disc">
+              <ul class="list-disc ml-6 mb-4">
                 <li v-for="role in cluster.permissions.roles.sort()">{{ role }}</li>
               </ul>
               Actions :
-              <ul class="list-disc">
+              <ul class="list-disc ml-6">
                 <li v-for="action in cluster.permissions.actions.sort()">{{ action }}</li>
               </ul>
             </dd>

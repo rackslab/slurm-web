@@ -14,7 +14,7 @@ const { data, unable } = useClusterDataPoller<ClusterQos[]>('qos', 10000, props)
 
 <template>
   <ClusterMainLayout :cluster="props.cluster" title="QOS">
-    <div v-if="unable">Unable to display data from cluster {{ props.cluster }}</div>
+    <div v-if="unable">Unable to retrieve QOS information from cluster {{ props.cluster }}</div>
     <ul v-else v-for="qos in data" :key="qos.name">
       <li>{{ qos.name }} ({{ qos.description }})</li>
     </ul>

@@ -68,13 +68,19 @@ const router = createRouter({
       path: '/:cluster/dashboard',
       name: 'dashboard',
       component: DashboardView,
-      props: true
+      props: true,
+      meta: {
+        entry: 'dashboard'
+      }
     },
     {
       path: '/:cluster/jobs',
       name: 'jobs',
       component: JobsView,
-      props: true
+      props: true,
+      meta: {
+        entry: 'jobs'
+      }
     },
     {
       path: '/:cluster/job/:id',
@@ -83,37 +89,55 @@ const router = createRouter({
       props: (route: RouteLocation) => ({
         cluster: route.params.cluster,
         id: parseInt(route.params.id as string)
-      })
+      }),
+      meta: {
+        entry: 'jobs'
+      }
     },
     {
       path: '/:cluster/resources',
       name: 'resources',
       component: ResourcesView,
-      props: true
+      props: true,
+      meta: {
+        entry: 'resources'
+      }
     },
     {
       path: '/:cluster/qos',
       name: 'qos',
       component: QosView,
-      props: true
+      props: true,
+      meta: {
+        entry: 'qos'
+      }
     },
     {
       path: '/:cluster/reservations',
       name: 'reservations',
       component: ReservationsView,
-      props: true
+      props: true,
+      meta: {
+        entry: 'reservations'
+      }
     },
     {
       path: '/:cluster/accounts',
       name: 'accounts',
       component: AccountsView,
-      props: true
+      props: true,
+      meta: {
+        entry: 'accounts'
+      }
     },
     {
       path: '/:cluster/reports',
       name: 'reports',
       component: ReportsView,
-      props: true
+      props: true,
+      meta: {
+        entry: 'reports'
+      }
     }
   ]
 })
@@ -128,8 +152,9 @@ router.beforeEach(async (to, from) => {
     auth.returnUrl = to.fullPath
     return '/login'
   }
-  runtime.navigation = to.name as string
+  runtime.navigation = to.meta.entry as string
   runtime.routePath = to.path as string
+  runtime.sidebarOpen = false
 
   /* If entering settings page, save previous route to get it back */
   if (

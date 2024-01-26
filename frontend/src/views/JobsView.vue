@@ -46,7 +46,7 @@ const state_filters = [
 
 const open = ref(false)
 const route = useRoute()
-const { data, unable } = useClusterDataPoller<ClusterJob[]>('jobs', 5000, props)
+const { data, unable, loaded } = useClusterDataPoller<ClusterJob[]>('jobs', 5000, props)
 
 function computeSortJobs() {
   console.log(`Computing sorted jobs by ${runtimeStore.jobs.sort}`)
@@ -412,9 +412,12 @@ onMounted(() => {
           <p class="mt-4 max-w-xl text-sm font-light text-gray-600">Jobs in cluster queue</p>
         </div>
 
-        <div class="mt-4 text-gray-600 text-right">
+        <div v-if="loaded" class="mt-4 text-gray-600 text-right">
           <div class="text-5xl font-bold">{{ sortedJobs.length }}</div>
           <div class="text-sm font-light">job{{ sortedJobs.length > 1 ? 's' : '' }} found</div>
+        </div>
+        <div v-else class="animate-pulse flex space-x-4">
+          <div class="rounded-2xl bg-slate-200 h-14 w-14"></div>
         </div>
       </div>
 
@@ -510,6 +513,9 @@ onMounted(() => {
 
       <div class="mt-8 flow-root">
         <div v-if="unable">Unable to get jobs</div>
+        <div v-else-if="!loaded" class="mx-4">
+          Loading jobs…
+        </div>
         <div v-else-if="sortedJobs.length" class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div class="inline-block min-w-full py-2 align-middle">
             <table class="min-w-full divide-y divide-gray-300">

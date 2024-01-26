@@ -11,24 +11,25 @@ const props = defineProps({
   }
 })
 
-const current = computed(() => {
+const current = computed((): [number, boolean] => {
   const now = new Date()
   if (props.job.time.end && new Date(props.job.time.end * 1000) < now) {
-    return 6
+    return [5, false]
   }
   if (props.job.time.start) {
     if (new Date(props.job.time.start * 1000) < now) {
-      return 4
+      return [2, true]
     } else {
-      return 3
+      return [2, false]
     }
   }
   if (props.job.time.eligible && new Date(props.job.time.eligible * 1000) < now) {
-    return 2
+    return [1, true]
   }
   if (props.job.time.submission && new Date(props.job.time.submission * 1000) < now) {
-    return 1
+    return [0, true]
   }
+  return [0, false]
 })
 
 function stepComment(step: string) {
@@ -38,7 +39,7 @@ function stepComment(step: string) {
     if (step === "Eligible") {
         return new Date(props.job.time.eligible * 1000).toLocaleString()
     }
-    if (step === "Scheduled") {
+    if (step === "Scheduling") {
         if (props.job.time.start) {
             return new Date(props.job.time.start * 1000).toLocaleString()
         }
@@ -59,8 +60,9 @@ function stepComment(step: string) {
     return ""
 }
 
-const steps = ['Submitted', 'Eligible', 'Scheduled', 'Running', 'Completing', 'Terminated']
+const steps = ['Submitted', 'Eligible', 'Scheduling', 'Running', 'Completing', 'Terminated']
 </script>
+
 <template>
   <ol v-if="current" role="list" class="overflow-hidden">
     <li
@@ -68,7 +70,7 @@ const steps = ['Submitted', 'Eligible', 'Scheduled', 'Running', 'Completing', 'T
       :key="step"
       :class="[stepIdx !== steps.length - 1 ? 'pb-10' : '', 'relative']"
     >
-      <template v-if="current > stepIdx">
+      <template v-if="current[0] >= stepIdx">
         <div
           v-if="stepIdx !== steps.length - 1"
           class="absolute left-4 top-4 -ml-px mt-0.5 h-full w-0.5 bg-slurmweb"
@@ -88,7 +90,7 @@ const steps = ['Submitted', 'Eligible', 'Scheduled', 'Running', 'Completing', 'T
           </span>
         </div>
       </template>
-      <template v-else-if="current === stepIdx">
+      <template v-else-if="current[0]+1 == stepIdx && current[1]">
         <div
           v-if="stepIdx !== steps.length - 1"
           class="absolute left-4 top-4 -ml-px mt-0.5 h-full w-0.5 bg-gray-300"

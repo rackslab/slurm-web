@@ -16,12 +16,13 @@ const props = defineProps({
   }
 })
 
-const { data, unable } = useClusterDataPoller<ClusterIndividualJob>('job', 5000, props)
+const { data, unable, loaded } = useClusterDataPoller<ClusterIndividualJob>('job', 5000, props)
 </script>
 
 <template>
   <ClusterMainLayout :cluster="cluster" :title="`Job ${id}`">
     <div v-if="unable">Unable to retrieve job {{ id }}</div>
+    <div v-else-if="!loaded">Loading job {{ id }}</div>
     <div v-else-if="data">
       <div class="flex justify-between">
         <div class="px-4 pb-8 sm:px-0">
@@ -88,7 +89,7 @@ const { data, unable } = useClusterDataPoller<ClusterIndividualJob>('job', 5000,
               </div>
               <div class="px-4 py-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
                 <dt class="text-sm font-medium leading-6 text-gray-900">Submit line</dt>
-                <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0 font-mono">
                   {{ data.submit_line }}
                 </dd>
               </div>
@@ -100,7 +101,7 @@ const { data, unable } = useClusterDataPoller<ClusterIndividualJob>('job', 5000,
               </div>
               <div class="px-4 py-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
                 <dt class="text-sm font-medium leading-6 text-gray-900">Working directory</dt>
-                <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0">
+                <dd class="mt-1 text-sm leading-6 text-gray-700 sm:col-span-2 sm:mt-0 font-mono">
                   {{ data.working_directory }}
                 </dd>
               </div>
@@ -156,6 +157,5 @@ const { data, unable } = useClusterDataPoller<ClusterIndividualJob>('job', 5000,
         </div>
       </div>
     </div>
-    <div v-else>Loading job {{ id }}</div>
   </ClusterMainLayout>
 </template>

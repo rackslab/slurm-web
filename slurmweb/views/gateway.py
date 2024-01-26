@@ -115,18 +115,30 @@ def request_agent(cluster: str, query: str, token: str = None):
     if token is not None:
         headers = {"Authorization": f"Bearer {token}"}
     try:
-        return requests.get(
-            f"{current_app.agents[cluster].url}/{query}",
-            headers=headers,
-        )
+        if request.method == "GET":
+            return requests.get(
+                f"{current_app.agents[cluster].url}/{query}",
+                headers=headers,
+            )
+        elif request.method == "POST":
+            return requests.post(
+                f"{current_app.agents[cluster].url}/{query}",
+                headers=headers,
+                json=request.json,
+            )
+        else:
+            abort(500, f"Unsupported request method {request.method}")
     except requests.exceptions.ConnectionError as err:
         logger.error("Connection error with agent %s: %s", cluster, str(err))
         abort(500, f"Connection error: {str(err)}")
 
 
-def proxy_agent(cluster: str, query: str, token: str = None):
+def proxy_agent(cluster: str, query: str, token: str = None, json: bool=True):
     response = request_agent(cluster, query, token)
-    return jsonify(response.json()), response.status_code
+    if json:
+        return jsonify(response.json()), response.status_code
+    else:
+        return response.content, response.status_code
 
 
 @check_jwt
@@ -163,3 +175,9 @@ def qos(cluster: str):
 @validate_cluster
 def accounts(cluster: str):
     return proxy_agent(cluster, "accounts", request.token)
+
+
+@check_jwt
+@validate_cluster
+def racksdb(cluster: str, query: str):
+    return proxy_agent(cluster, f"racksdb/{query}", request.token, json=False)

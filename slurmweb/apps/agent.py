@@ -42,8 +42,9 @@ class SlurmwebAppAgent(SlurmwebWebApp, RFLTokenizedRBACWebApp):
                 db=self.settings.racksdb.db,
                 ext=self.settings.racksdb.extensions,
                 schema=self.settings.racksdb.schema,
+                drawings_schema=self.settings.racksdb.drawings_schema,
             ),
-            url_prefix="/api/racksdb",
+            url_prefix="/racksdb",
         )
         if self.settings.policy.roles.exists():
             logger.debug("Select RBAC site roles policy %s", self.settings.policy.roles)

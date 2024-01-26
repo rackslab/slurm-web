@@ -26,12 +26,11 @@ const navigation = [
   { name: 'Accounts', route: 'accounts', icon: UsersIcon },
   { name: 'Reports', route: 'reports', icon: ChartPieIcon }
 ]
-const sidebarOpen = ref(false)
 </script>
 
 <template>
-  <TransitionRoot as="template" :show="sidebarOpen">
-    <Dialog as="div" class="relative z-50 lg:hidden" @close="sidebarOpen = false">
+  <TransitionRoot as="template" :show="runtimeStore.sidebarOpen">
+    <Dialog as="div" class="relative z-50 lg:hidden" @close="runtimeStore.sidebarOpen = false">
       <TransitionChild
         as="template"
         enter="transition-opacity ease-linear duration-300"
@@ -65,7 +64,7 @@ const sidebarOpen = ref(false)
               leave-to="opacity-0"
             >
               <div class="absolute left-full top-0 flex w-16 justify-center pt-5">
-                <button type="button" class="-m-2.5 p-2.5" @click="sidebarOpen = false">
+                <button type="button" class="-m-2.5 p-2.5" @click="runtimeStore.sidebarOpen = false">
                   <span class="sr-only">Close sidebar</span>
                   <XMarkIcon class="h-6 w-6 text-white" aria-hidden="true" />
                 </button>
@@ -73,13 +72,9 @@ const sidebarOpen = ref(false)
             </TransitionChild>
 
             <!-- Sidebar component, swap this element with another sidebar if you like -->
-            <div class="flex grow flex-col gap-y-5 overflow-y-auto bg-indigo-600 px-6 pb-4">
-              <div class="flex h-16 shrink-0 items-center">
-                <img
-                  class="h-8 w-auto"
-                  src="https://tailwindui.com/img/logos/mark.svg?color=white"
-                  alt="Your Company"
-                />
+            <div class="flex grow flex-col gap-y-5 overflow-y-auto bg-slurmweb px-6 pb-4">
+              <div class="flex h-16 shrink-0 items-center justify-center">
+                <img class="flex h-12" src="/logo/bitmaps/slurm-web_horizontal_bgblue_small.png" alt="Slurm-web"/>
               </div>
               <nav class="flex flex-1 flex-col">
                 <ul role="list" class="flex flex-1 flex-col gap-y-7">
@@ -90,8 +85,8 @@ const sidebarOpen = ref(false)
                           :to="{ name: item.route }"
                           :class="[
                             item.route == runtimeStore.navigation
-                              ? 'bg-indigo-700 text-white'
-                              : 'text-indigo-200 hover:text-white hover:bg-indigo-700',
+                              ? 'bg-slurmweb-dark text-white'
+                              : 'text-slurmweb-font-disabled hover:text-white',
                             'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold'
                           ]"
                         >
@@ -100,7 +95,7 @@ const sidebarOpen = ref(false)
                             :class="[
                               item.route == runtimeStore.navigation
                                 ? 'text-white'
-                                : 'text-indigo-200 group-hover:text-white',
+                                : 'text-slurmweb-font-disabled group-hover:text-white',
                               'h-6 w-6 shrink-0'
                             ]"
                             aria-hidden="true"
@@ -113,10 +108,10 @@ const sidebarOpen = ref(false)
                   <li class="mt-auto">
                     <RouterLink
                       :to="{ name: 'settings' }"
-                      class="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-indigo-200 hover:bg-indigo-700 hover:text-white"
+                      class="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-slurmweb-font-disabled hover:bg-slurmweb-dark hover:text-white"
                     >
                       <Cog6ToothIcon
-                        class="h-6 w-6 shrink-0 text-indigo-200 group-hover:text-white"
+                        class="h-6 w-6 shrink-0 text-slurmweb-font-disabled group-hover:text-white"
                         aria-hidden="true"
                       />
                       Settings
@@ -136,7 +131,7 @@ const sidebarOpen = ref(false)
     <!-- Sidebar component, swap this element with another sidebar if you like -->
     <div class="flex grow flex-col gap-y-5 overflow-y-auto bg-slurmweb px-6 pb-4">
       <div class="flex h-24 shrink-0 items-center">
-        <img src="/logo/bitmaps/slurm-web_horizontal_bgblue_small.png" />
+        <img src="/logo/bitmaps/slurm-web_horizontal_bgblue_small.png" alt="Slurm-web"/>
       </div>
       <nav class="flex flex-1 flex-col">
         <ul role="list" class="flex flex-1 flex-col gap-y-7">

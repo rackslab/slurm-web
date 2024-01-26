@@ -44,6 +44,7 @@ class SlurmwebAppGateway(SlurmwebWebApp, RFLTokenizedWebApp):
         SlurmwebAppRoute("/agents/<cluster>/nodes", views.nodes),
         SlurmwebAppRoute("/agents/<cluster>/qos", views.qos),
         SlurmwebAppRoute("/agents/<cluster>/accounts", views.accounts),
+        SlurmwebAppRoute("/agents/<cluster>/racksdb/<path:query>", views.racksdb, methods=["GET", "POST"])
     }
 
     def __init__(self, args):

@@ -32,6 +32,7 @@ function getStatusColor(status: string): JobLabelColors {
   }
 }
 </script>
+
 <template>
   <span
     :class="[

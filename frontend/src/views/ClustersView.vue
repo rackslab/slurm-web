@@ -5,9 +5,9 @@ import { RouterLink, useRouter } from 'vue-router'
 import { useRuntimeStore } from '@/stores/runtime'
 import {
   useGatewayAPI,
-  AuthenticationError,
   type ClusterDescription
 } from '@/composables/GatewayAPI'
+import { AuthenticationError } from '@/composables/HTTPErrors'
 import { ChevronRightIcon, XCircleIcon } from '@heroicons/vue/20/solid'
 import { CpuChipIcon, PlayCircleIcon } from '@heroicons/vue/24/outline'
 

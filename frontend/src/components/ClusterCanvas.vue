@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import type { Ref } from 'vue'
-import { useHttp } from '@/plugins/http'
-import { useRacksDBAPI } from '@/composables/RacksDBAPI'
+import { useGatewayAPI } from '@/composables/GatewayAPI'
 
-const http = useHttp()
-const racksDBAPI = useRacksDBAPI(http)
+const props = defineProps({
+  cluster: {
+    type: String,
+    required: true
+  }
+})
+
+const gateway = useGatewayAPI()
 
 const container: Ref<HTMLDivElement | null> = ref(null)
 const loading: Ref<HTMLSpanElement | null> = ref(null)
@@ -19,9 +24,14 @@ async function updateCanvas() {
     loading.value.style.visibility = 'hidden'
     canvas.value.style.visibility = 'visible'
     canvas.value.width = width
+    canvas.value.height = 500
     var context = canvas.value.getContext('2d') as CanvasRenderingContext2D
-    const image = await createImageBitmap(await racksDBAPI.infrastructureImagePng('mercury'))
-    context.drawImage(image, 0, 0, canvas.value.width as number, canvas.value.height as number)
+    const image = await createImageBitmap(await gateway.infrastructureImagePng(props.cluster))
+    const maxRatio = Math.max(image.height / canvas.value.height, image.width / canvas.value.width)
+    console.log(`image width ${image.width} height ${image.height} ratio ${maxRatio} canvas width ${canvas.value.width} height ${canvas.value.height}`)
+    const x = (canvas.value.width - (image.width / maxRatio)) / 2
+    const y = (canvas.value.height - (image.height / maxRatio)) / 2
+    context.drawImage(image, x, y, image.width / maxRatio, image.height / maxRatio)
   }
 }
 
@@ -36,6 +46,13 @@ function updateCanvasDimensions() {
     timeout = setTimeout(updateCanvas, delay)
   }
 }
+
+watch(
+  () => props.cluster,
+  () => {
+    updateCanvas()
+  }
+)
 
 onMounted(() => {
   updateCanvas()

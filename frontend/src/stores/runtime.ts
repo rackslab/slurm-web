@@ -124,6 +124,8 @@ export const useRuntimeStore = defineStore('runtime', () => {
   const jobs: Ref<JobsViewSettings> = ref(new JobsViewSettings())
   const errors: Ref<Array<RuntimeError>> = ref([])
   const notifications: Ref<Array<Notification>> = ref([])
+  const sidebarOpen: Ref<boolean> = ref(false)
+
   const availableClusters: Ref<Array<ClusterDescription>> = ref(
     JSON.parse(localStorage.getItem('availableClusters') || '[]') as ClusterDescription[]
   )
@@ -165,6 +167,7 @@ export const useRuntimeStore = defineStore('runtime', () => {
     jobs,
     errors,
     notifications,
+    sidebarOpen,
     availableClusters,
     currentCluster,
     addCluster,

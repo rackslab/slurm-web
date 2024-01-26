@@ -20,15 +20,6 @@ const props = defineProps({
   }
 })
 
-const route = useRoute()
-
-const userNavigation = [
-  { name: 'Jobs', route: 'jobs' },
-  { name: 'Sign out', route: 'signout' }
-]
-
-const sidebarOpen = ref(false)
-
 const clusterNotFound: Ref<boolean> = ref(false)
 const runtimeStore = useRuntimeStore()
 const authStore = useAuthStore()
@@ -49,7 +40,7 @@ onMounted(() => {
       <button
         type="button"
         class="-m-2.5 p-2.5 text-gray-700 lg:hidden"
-        @click="sidebarOpen = true"
+        @click="runtimeStore.sidebarOpen = true"
       >
         <span class="sr-only">Open sidebar</span>
         <Bars3Icon class="h-6 w-6" aria-hidden="true" />

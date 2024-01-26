@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
-import type { Ref } from 'vue'
-import { useRuntimeStore } from '@/stores/runtime'
-import { useRouter } from 'vue-router'
-import { useGatewayAPI, AuthenticationError } from '@/composables/GatewayAPI'
+import { useClusterDataPoller } from '@/composables/DataPoller'
 import type { ClusterNode } from '@/composables/GatewayAPI'
 import ClusterCanvas from '@/components/ClusterCanvas.vue'
 import ClusterMainLayout from '@/components/ClusterMainLayout.vue'
@@ -15,63 +11,8 @@ const props = defineProps({
   }
 })
 
-const runtimeStore = useRuntimeStore()
-const nodes: Ref<Array<ClusterNode>> = ref([])
-const canvas: Ref<HTMLCanvasElement | null> = ref(null)
-const router = useRouter()
-const gateway = useGatewayAPI()
+const { data, unable } = useClusterDataPoller<ClusterNode[]>('nodes', 10000, props)
 
-let interval: number = 0
-
-function reportAuthenticationError(error: AuthenticationError) {
-  runtimeStore.reportError(`Authentication error: ${error.message}`)
-  router.push({ name: 'login' })
-}
-
-function reportOtherError(error: Error) {
-  console.log(`Error: ${error.message}`)
-}
-
-async function getClusterNodes(cluster: string) {
-  try {
-    nodes.value = await gateway.nodes(cluster)
-  } catch (error: any) {
-    if (error instanceof AuthenticationError) {
-      reportAuthenticationError(error)
-    } else {
-      reportOtherError(error)
-    }
-  }
-}
-
-function startClusterNodesPoller(cluster: string) {
-  console.log(`Start nodes poller for cluster ${cluster}`)
-  getClusterNodes(cluster)
-  interval = setInterval(getClusterNodes, 5000, cluster)
-}
-
-function stopClusterNodesPoller(cluster: string) {
-  console.log(`Stop nodes poller for cluster ${cluster}`)
-  clearInterval(interval)
-}
-
-watch(
-  () => props.cluster,
-  (newCluster, oldCluster) => {
-    stopClusterNodesPoller(oldCluster)
-    console.log(`Updating nodes for cluster ${newCluster}`)
-    nodes.value = []
-    startClusterNodesPoller(newCluster)
-  }
-)
-
-onMounted(() => {
-  startClusterNodesPoller(props.cluster)
-})
-
-onUnmounted(() => {
-  stopClusterNodesPoller(props.cluster)
-})
 </script>
 
 <template>
@@ -81,8 +22,9 @@ onUnmounted(() => {
         <h1 class="text-3xl font-bold tracking-tight text-gray-900">Nodes</h1>
         <p class="mt-4 max-w-xl text-sm text-gray-700">Nodes available on cluster</p>
       </div>
-      <ClusterCanvas />
-      <div class="mt-8 flow-root">
+      <ClusterCanvas :cluster="props.cluster"/>
+      <div v-if="unable">Unable to retrieve nodes information from cluster {{ props.cluster }}</div>
+      <div v-else class="mt-8 flow-root">
         <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div class="inline-block min-w-full py-2 align-middle">
             <table class="min-w-full divide-y divide-gray-300">
@@ -109,7 +51,7 @@ onUnmounted(() => {
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-200 bg-white">
-                <tr v-for="node in nodes" :key="node.name">
+                <tr v-for="node in data" :key="node.name">
                   <td
                     class="whitespace-nowrap py-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8"
                   >

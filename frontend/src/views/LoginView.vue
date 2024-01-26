@@ -3,7 +3,8 @@ import { ref } from 'vue'
 import type { Ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRuntimeStore } from '@/stores/runtime'
-import { useGatewayAPI, AuthenticationError } from '@/composables/GatewayAPI'
+import { useGatewayAPI } from '@/composables/GatewayAPI'
+import { AuthenticationError } from '@/composables/HTTPErrors'
 
 const gateway = useGatewayAPI()
 

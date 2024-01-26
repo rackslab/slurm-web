@@ -184,12 +184,16 @@ racksdb:
     doc: Path to RacksDB database
   schema:
     type: path
-    default: /usr/share/racksdb/schema.yml
+    default: /usr/share/racksdb/schemas/racksdb.yml
     doc: Path to RacksDB database schema
   extensions:
     type: path
     default: /etc/racksdb/extensions.yml
     doc: Path to site-specific RacksDB schema extensions
+  drawings_schema:
+    type: path
+    default: /usr/share/racksdb/schemas/drawings.yml
+    doc: Path to RacksDB database schema
 
 cache:
   enabled:

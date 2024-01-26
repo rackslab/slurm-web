@@ -5,10 +5,9 @@ import { useRouter } from 'vue-router'
 import { useRuntimeStore } from '@/stores/runtime'
 import {
   useGatewayAPI,
-  AuthenticationError,
-  PermissionError,
   type UserDescription
 } from '@/composables/GatewayAPI'
+import { AuthenticationError, PermissionError } from '@/composables/HTTPErrors'
 import { ChevronUpDownIcon, CheckIcon } from '@heroicons/vue/20/solid'
 
 import {
