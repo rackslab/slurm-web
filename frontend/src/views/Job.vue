@@ -1,9 +1,13 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
+import type { LocationQueryRaw } from 'vue-router'
 import ClusterMainLayout from '@/components/ClusterMainLayout.vue'
 import { useClusterDataPoller } from '@/composables/DataPoller'
 import type { ClusterIndividualJob } from '@/composables/GatewayAPI'
 import JobStatusLabel from '@/components/jobs/JobStatusLabel.vue'
 import JobSteps from '@/components/jobs/JobSteps.vue'
+import { useRuntimeStore } from '@/stores/runtime'
+import { ChevronLeftIcon } from '@heroicons/vue/20/solid'
 
 const props = defineProps({
   cluster: {
@@ -16,11 +20,30 @@ const props = defineProps({
   }
 })
 
+const runtimeStore = useRuntimeStore()
+const router = useRouter()
+
+function backToJobs() {
+  router.push({
+    name: 'jobs',
+    params: { cluster: runtimeStore.currentCluster?.name },
+    query: runtimeStore.jobs.query() as LocationQueryRaw
+  })
+}
+
 const { data, unable, loaded } = useClusterDataPoller<ClusterIndividualJob>('job', 5000, props)
 </script>
 
 <template>
   <ClusterMainLayout :cluster="cluster" :title="`Job ${id}`">
+    <button
+      @click="backToJobs()"
+      type="button"
+      class="inline-flex items-center gap-x-2 rounded-md bg-slurmweb mt-8 mb-16 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slurmweb-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slurmweb-dark"
+    >
+      <ChevronLeftIcon class="-ml-0.5 h-5 w-5" aria-hidden="true" />
+      Back to jobs
+    </button>
     <div v-if="unable">Unable to retrieve job {{ id }}</div>
     <div v-else-if="!loaded">Loading job {{ id }}</div>
     <div v-else-if="data">

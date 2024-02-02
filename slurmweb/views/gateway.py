@@ -110,19 +110,28 @@ def users():
     )
 
 
-def request_agent(cluster: str, query: str, token: str = None):
+def request_agent(
+    cluster: str, query: str, token: str = None, with_version: bool = True
+):
     headers = {}
     if token is not None:
         headers = {"Authorization": f"Bearer {token}"}
     try:
+        if with_version:
+            url = (
+                f"{current_app.agents[cluster].url}/"
+                f"v{current_app.settings.agents.version}/{query}"
+            )
+        else:
+            url = f"{current_app.agents[cluster].url}/{query}"
         if request.method == "GET":
             return requests.get(
-                f"{current_app.agents[cluster].url}/{query}",
+                url,
                 headers=headers,
             )
         elif request.method == "POST":
             return requests.post(
-                f"{current_app.agents[cluster].url}/{query}",
+                url,
                 headers=headers,
                 json=request.json,
             )
@@ -133,8 +142,14 @@ def request_agent(cluster: str, query: str, token: str = None):
         abort(500, f"Connection error: {str(err)}")
 
 
-def proxy_agent(cluster: str, query: str, token: str = None, json: bool=True):
-    response = request_agent(cluster, query, token)
+def proxy_agent(
+    cluster: str,
+    query: str,
+    token: str = None,
+    json: bool = True,
+    with_version: bool = True,
+):
+    response = request_agent(cluster, query, token, with_version)
     if json:
         return jsonify(response.json()), response.status_code
     else:
@@ -167,6 +182,12 @@ def nodes(cluster: str):
 
 @check_jwt
 @validate_cluster
+def partitions(cluster: str):
+    return proxy_agent(cluster, "partitions", request.token)
+
+
+@check_jwt
+@validate_cluster
 def qos(cluster: str):
     return proxy_agent(cluster, "qos", request.token)
 
@@ -180,4 +201,10 @@ def accounts(cluster: str):
 @check_jwt
 @validate_cluster
 def racksdb(cluster: str, query: str):
-    return proxy_agent(cluster, f"racksdb/{query}", request.token, json=False)
+    return proxy_agent(
+        cluster,
+        f"racksdb/v{current_app.settings.agents.racksdb_version}/{query}",
+        request.token,
+        json=False,
+        with_version=False,
+    )

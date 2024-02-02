@@ -3,10 +3,7 @@ import { onMounted, ref, computed, watch } from 'vue'
 import type { Ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRuntimeStore } from '@/stores/runtime'
-import {
-  useGatewayAPI,
-  type AccountDescription
-} from '@/composables/GatewayAPI'
+import { useGatewayAPI, type AccountDescription } from '@/composables/GatewayAPI'
 import { AuthenticationError, PermissionError } from '@/composables/HTTPErrors'
 import { ChevronUpDownIcon, CheckIcon } from '@heroicons/vue/20/solid'
 

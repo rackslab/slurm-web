@@ -22,6 +22,7 @@ filters:
     - job_state
     - state_reason
     - partition
+    - priority
     - qos
     doc: |
       List of jobs fields selected in slurmrestd API when retrieving a list of
@@ -89,7 +90,15 @@ filters:
     doc: |
       List of nodes fields selected in slurmrestd API, all other fields are
       filtered out.
-      jobs:
+  partitions:
+    type: list
+    content: str
+    default:
+    - name
+    - node_sets
+    doc: |
+      List of partitions fields selected in slurmrestd API, all other fields are
+      filtered out.
   qos:
     type: list
     content: str
@@ -211,3 +220,27 @@ cache:
   password:
     type: str
     doc: Password to connect to protected Redis server
+  jobs:
+    type: int
+    default: 30
+    doc: Expiration delay in seconds for jobs in cache
+  job:
+    type: int
+    default: 10
+    doc: Expiration delay in seconds for invidual jobs in cache
+  nodes:
+    type: int
+    default: 30
+    doc: Expiration delay in seconds for nodes in cache
+  partitions:
+    type: int
+    default: 60
+    doc: Expiration delay in seconds for partitions in cache
+  qos:
+    type: int
+    default: 60
+    doc: Expiration delay in seconds for QOS in cache
+  accounts:
+    type: int
+    default: 60
+    doc: Expiration delay in seconds for accounts in cache

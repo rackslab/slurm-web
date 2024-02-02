@@ -156,6 +156,17 @@ router.beforeEach(async (to, from) => {
   runtime.routePath = to.path as string
   runtime.sidebarOpen = false
 
+  if (to.params.cluster) {
+    if (!runtime.currentCluster || to.params.cluster !== runtime.currentCluster.name) {
+      runtime.currentCluster = runtime.getCluster(to.params.cluster as string)
+      console.log(`Calling getCluster(): ${runtime.currentCluster?.name} / ${to.params.cluster}`)
+      console.log(`New permissions: ${runtime.currentCluster?.permissions.actions}`)
+    }
+  } else {
+    console.log(`Unsetting current cluster`)
+    runtime.currentCluster = undefined
+  }
+
   /* If entering settings page, save previous route to get it back */
   if (
     from.name !== undefined &&

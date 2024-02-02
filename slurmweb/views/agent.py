@@ -83,14 +83,14 @@ def filter_fields(selection: Union[list[str], None], func: Callable, *args: List
     return items
 
 
-def _cached_data(cache_key: str, func: Callable, *args: List[Any]):
+def _cached_data(cache_key: str, expiration: int, func: Callable, *args: List[Any]):
     if not current_app.settings.cache.enabled:
         return func(*args)
     try:
         data = current_app.cache.get(cache_key)
         if data is None:
             data = func(*args)
-            current_app.cache.put(cache_key, data)
+            current_app.cache.put(cache_key, data, expiration)
         return data
     except SlurmwebCacheError as err:
         logger.error("Cache error: %s", str(err))
@@ -100,6 +100,7 @@ def _cached_data(cache_key: str, func: Callable, *args: List[Any]):
 def _cached_jobs():
     return _cached_data(
         "jobs",
+        current_app.settings.cache.jobs,
         filter_fields,
         current_app.settings.filters.jobs,
         slurmrest,
@@ -141,6 +142,7 @@ def _get_job(job):
 def _cached_job(job):
     return _cached_data(
         f"job-{job}",
+        current_app.settings.cache.job,
         _get_job,
         job,
     )
@@ -149,6 +151,7 @@ def _cached_job(job):
 def _cached_nodes():
     return _cached_data(
         "nodes",
+        current_app.settings.cache.nodes,
         filter_fields,
         current_app.settings.filters.nodes,
         slurmrest,
@@ -157,9 +160,22 @@ def _cached_nodes():
     )
 
 
+def _cached_partitions():
+    return _cached_data(
+        "partitions",
+        current_app.settings.cache.partitions,
+        filter_fields,
+        current_app.settings.filters.partitions,
+        slurmrest,
+        f"/slurm/v{current_app.settings.slurmrestd.version}/partitions",
+        "partitions",
+    )
+
+
 def _cached_qos():
     return _cached_data(
         "qos",
+        current_app.settings.cache.qos,
         filter_fields,
         current_app.settings.filters.qos,
         slurmrest,
@@ -171,6 +187,7 @@ def _cached_qos():
 def _cached_accounts():
     return _cached_data(
         "accounts",
+        current_app.settings.cache.accounts,
         filter_fields,
         current_app.settings.filters.accounts,
         slurmrest,
@@ -214,6 +231,11 @@ def job(job: int):
 @rbac_action("view-nodes")
 def nodes():
     return jsonify(_cached_nodes())
+
+
+@rbac_action("view-partitions")
+def partitions():
+    return jsonify(_cached_partitions())
 
 
 @rbac_action("view-qos")

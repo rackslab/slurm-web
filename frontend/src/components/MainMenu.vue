@@ -18,13 +18,18 @@ import { useRuntimeStore } from '@/stores/runtime'
 
 const runtimeStore = useRuntimeStore()
 const navigation = [
-  { name: 'Dashboard', route: 'dashboard', icon: HomeIcon },
-  { name: 'Jobs', route: 'jobs', icon: PlayCircleIcon },
-  { name: 'Resources', route: 'resources', icon: CpuChipIcon },
-  { name: 'QOS', route: 'qos', icon: SwatchIcon },
-  { name: 'Reservations', route: 'reservations', icon: CalendarIcon },
-  { name: 'Accounts', route: 'accounts', icon: UsersIcon },
-  { name: 'Reports', route: 'reports', icon: ChartPieIcon }
+  { name: 'Dashboard', route: 'dashboard', icon: HomeIcon, permission: 'view-stats' },
+  { name: 'Jobs', route: 'jobs', icon: PlayCircleIcon, permission: 'view-jobs' },
+  { name: 'Resources', route: 'resources', icon: CpuChipIcon, permission: 'view-nodes' },
+  { name: 'QOS', route: 'qos', icon: SwatchIcon, permission: 'view-qos' },
+  {
+    name: 'Reservations',
+    route: 'reservations',
+    icon: CalendarIcon,
+    permission: 'view-reservations'
+  },
+  { name: 'Accounts', route: 'accounts', icon: UsersIcon, permission: 'view-accounts' },
+  { name: 'Reports', route: 'reports', icon: ChartPieIcon, permission: 'view-stats' }
 ]
 </script>
 
@@ -64,17 +69,25 @@ const navigation = [
               leave-to="opacity-0"
             >
               <div class="absolute left-full top-0 flex w-16 justify-center pt-5">
-                <button type="button" class="-m-2.5 p-2.5" @click="runtimeStore.sidebarOpen = false">
+                <button
+                  type="button"
+                  class="-m-2.5 p-2.5"
+                  @click="runtimeStore.sidebarOpen = false"
+                >
                   <span class="sr-only">Close sidebar</span>
                   <XMarkIcon class="h-6 w-6 text-white" aria-hidden="true" />
                 </button>
               </div>
             </TransitionChild>
 
-            <!-- Sidebar component, swap this element with another sidebar if you like -->
+            <!-- Sidebar component -->
             <div class="flex grow flex-col gap-y-5 overflow-y-auto bg-slurmweb px-6 pb-4">
               <div class="flex h-16 shrink-0 items-center justify-center">
-                <img class="flex h-12" src="/logo/bitmaps/slurm-web_horizontal_bgblue_small.png" alt="Slurm-web"/>
+                <img
+                  class="flex h-12"
+                  src="/logo/bitmaps/slurm-web_horizontal_bgblue_small.png"
+                  alt="Slurm-web"
+                />
               </div>
               <nav class="flex flex-1 flex-col">
                 <ul role="list" class="flex flex-1 flex-col gap-y-7">
@@ -82,6 +95,7 @@ const navigation = [
                     <ul role="list" class="-mx-2 space-y-1">
                       <li v-for="item in navigation" :key="item.name">
                         <RouterLink
+                          v-if="runtimeStore.hasPermission(item.permission)"
                           :to="{ name: item.route }"
                           :class="[
                             item.route == runtimeStore.navigation
@@ -131,7 +145,7 @@ const navigation = [
     <!-- Sidebar component, swap this element with another sidebar if you like -->
     <div class="flex grow flex-col gap-y-5 overflow-y-auto bg-slurmweb px-6 pb-4">
       <div class="flex h-24 shrink-0 items-center">
-        <img src="/logo/bitmaps/slurm-web_horizontal_bgblue_small.png" alt="Slurm-web"/>
+        <img src="/logo/bitmaps/slurm-web_horizontal_bgblue_small.png" alt="Slurm-web" />
       </div>
       <nav class="flex flex-1 flex-col">
         <ul role="list" class="flex flex-1 flex-col gap-y-7">
@@ -139,6 +153,7 @@ const navigation = [
             <ul role="list" class="-mx-2 space-y-1">
               <li v-for="item in navigation" :key="item.name">
                 <RouterLink
+                  v-if="runtimeStore.hasPermission(item.permission)"
                   :to="{ name: item.route }"
                   :class="[
                     item.route == runtimeStore.navigation

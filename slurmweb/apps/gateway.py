@@ -42,9 +42,14 @@ class SlurmwebAppGateway(SlurmwebWebApp, RFLTokenizedWebApp):
         SlurmwebAppRoute("/agents/<cluster>/jobs", views.jobs),
         SlurmwebAppRoute("/agents/<cluster>/job/<int:job>", views.job),
         SlurmwebAppRoute("/agents/<cluster>/nodes", views.nodes),
+        SlurmwebAppRoute("/agents/<cluster>/partitions", views.partitions),
         SlurmwebAppRoute("/agents/<cluster>/qos", views.qos),
         SlurmwebAppRoute("/agents/<cluster>/accounts", views.accounts),
-        SlurmwebAppRoute("/agents/<cluster>/racksdb/<path:query>", views.racksdb, methods=["GET", "POST"])
+        SlurmwebAppRoute(
+            "/agents/<cluster>/racksdb/<path:query>",
+            views.racksdb,
+            methods=["GET", "POST"],
+        ),
     }
 
     def __init__(self, args):
@@ -58,6 +63,10 @@ class SlurmwebAppGateway(SlurmwebWebApp, RFLTokenizedWebApp):
                 group_base=self.settings.ldap.group_base,
                 user_fullname_attribute=self.settings.ldap.user_fullname_attribute,
                 group_name_attribute=self.settings.ldap.group_name_attribute,
+                starttls=self.settings.ldap.starttls,
+                bind_dn=self.settings.ldap.bind_dn,
+                bind_password=self.settings.ldap.bind_password,
+                restricted_groups=self.settings.ldap.restricted_groups,
             )
         else:
             raise SlurmwebConfigurationError(
@@ -94,5 +103,5 @@ class SlurmwebAppGateway(SlurmwebWebApp, RFLTokenizedWebApp):
                 self.agents[agent.cluster] = agent
 
     def _agent_info(self, url: str) -> SlurmwebAgent:
-        response = requests.get(f"{url}/info")
+        response = requests.get(f"{url}/v{self.settings.agents.version}/info")
         return SlurmwebAgent.from_json(url, response.json())

@@ -8,29 +8,73 @@ interface JobsViewFilters {
   states: string[]
   users: string[]
   accounts: string[]
+  qos: string[]
+  partitions: string[]
 }
 
 interface JobsQueryParameters {
   sort?: string
+  order?: string
   states?: string
   users?: string
   accounts?: string
+  qos?: string
+  partitions?: string
   page?: number
 }
 
+const JobSortOrders = ['asc', 'desc'] as const
+export type JobSortOrder = (typeof JobSortOrders)[number]
+const JobSortCriteria = ['id', 'user', 'state', 'priority'] as const
+export type JobSortCriterion = (typeof JobSortCriteria)[number]
+
 export class JobsViewSettings {
-  sort: string = 'id'
+  sort: JobSortCriterion = 'id'
+  order: JobSortOrder = 'asc'
   page: number = 1
-  filters: JobsViewFilters = { states: [], users: [], accounts: [] }
+  filters: JobsViewFilters = { states: [], users: [], accounts: [], qos: [], partitions: [] }
 
   restoreSortDefault(): void {
     this.sort = 'id'
+  }
+  isValidSortOrder(order: unknown) {
+    if (typeof order === 'string' && JobSortOrders.includes(order as JobSortOrder)) {
+      return true
+    }
+    return false
+  }
+  isValidSortCriterion(criterion: unknown) {
+    if (typeof criterion === 'string' && JobSortCriteria.includes(criterion as JobSortCriterion)) {
+      return true
+    }
+    return false
+  }
+  removeStateFilter(state: string) {
+    this.filters.states = this.filters.states.filter((element) => element != state)
+  }
+
+  removeUserFilter(user: string) {
+    this.filters.users = this.filters.users.filter((element) => element != user)
+  }
+
+  removeAccountFilter(account: string) {
+    this.filters.accounts = this.filters.accounts.filter((element) => element != account)
+  }
+
+  removeQosFilter(qos: string) {
+    this.filters.qos = this.filters.qos.filter((element) => element != qos)
+  }
+
+  removePartitionFilter(partition: string) {
+    this.filters.partitions = this.filters.partitions.filter((element) => element != partition)
   }
   emptyFilters(): boolean {
     return (
       this.filters.states.length == 0 &&
       this.filters.users.length == 0 &&
-      this.filters.accounts.length == 0
+      this.filters.accounts.length == 0 &&
+      this.filters.qos.length == 0 &&
+      this.filters.partitions.length == 0
     )
   }
   matchesFilters(job: ClusterJob): boolean {
@@ -64,6 +108,25 @@ export class JobsViewSettings {
         return false
       }
     }
+    if (this.filters.qos.length != 0) {
+      if (
+        !this.filters.qos.some((qos) => {
+          return qos.toLocaleLowerCase() == job.qos.toLocaleLowerCase()
+        })
+      ) {
+        return false
+      }
+    }
+    if (this.filters.partitions.length != 0) {
+      if (
+        !this.filters.partitions.some((partition) => {
+          return partition.toLocaleLowerCase() == job.partition.toLocaleLowerCase()
+        })
+      ) {
+        return false
+      }
+    }
+
     return true
   }
   query(): JobsQueryParameters {
@@ -74,6 +137,9 @@ export class JobsViewSettings {
     if (this.sort != 'id') {
       result.sort = this.sort
     }
+    if (this.order != 'asc') {
+      result.order = this.order
+    }
     if (this.filters.states.length > 0) {
       result.states = this.filters.states.join()
     }
@@ -82,6 +148,12 @@ export class JobsViewSettings {
     }
     if (this.filters.accounts.length > 0) {
       result.accounts = this.filters.accounts.join()
+    }
+    if (this.filters.qos.length > 0) {
+      result.qos = this.filters.qos.join()
+    }
+    if (this.filters.partitions.length > 0) {
+      result.partitions = this.filters.partitions.join()
     }
     return result
   }
@@ -129,15 +201,26 @@ export const useRuntimeStore = defineStore('runtime', () => {
   const availableClusters: Ref<Array<ClusterDescription>> = ref(
     JSON.parse(localStorage.getItem('availableClusters') || '[]') as ClusterDescription[]
   )
-  const currentCluster: Ref<string | undefined> = ref()
+  const currentCluster: Ref<ClusterDescription | undefined> = ref()
 
   function addCluster(cluster: ClusterDescription) {
     availableClusters.value.push(cluster)
     localStorage.setItem('availableClusters', JSON.stringify(availableClusters.value))
   }
 
+  function getCluster(name: string): ClusterDescription {
+    return availableClusters.value.filter((cluster) => cluster.name === name)[0]
+  }
+
   function checkClusterAvailable(name: string): boolean {
     return availableClusters.value.filter((cluster) => cluster.name === name).length > 0
+  }
+
+  function hasPermission(permission: string): boolean {
+    return (
+      currentCluster.value === undefined ||
+      currentCluster.value.permissions.actions.includes(permission)
+    )
   }
 
   function addNotification(notification: Notification) {
@@ -160,6 +243,9 @@ export const useRuntimeStore = defineStore('runtime', () => {
     }
     addNotification(new Notification('ERROR', message, 5))
   }
+  function reportInfo(message: string) {
+    addNotification(new Notification('INFO', message, 5))
+  }
   return {
     navigation,
     routePath,
@@ -171,9 +257,12 @@ export const useRuntimeStore = defineStore('runtime', () => {
     availableClusters,
     currentCluster,
     addCluster,
+    getCluster,
     checkClusterAvailable,
+    hasPermission,
     addNotification,
     removeNotification,
-    reportError
+    reportError,
+    reportInfo
   }
 })

@@ -12,7 +12,6 @@ const props = defineProps({
 })
 
 const { data, unable } = useClusterDataPoller<ClusterNode[]>('nodes', 10000, props)
-
 </script>
 
 <template>
@@ -22,7 +21,7 @@ const { data, unable } = useClusterDataPoller<ClusterNode[]>('nodes', 10000, pro
         <h1 class="text-3xl font-bold tracking-tight text-gray-900">Nodes</h1>
         <p class="mt-4 max-w-xl text-sm text-gray-700">Nodes available on cluster</p>
       </div>
-      <ClusterCanvas :cluster="props.cluster"/>
+      <ClusterCanvas :cluster="props.cluster" />
       <div v-if="unable">Unable to retrieve nodes information from cluster {{ props.cluster }}</div>
       <div v-else class="mt-8 flow-root">
         <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">

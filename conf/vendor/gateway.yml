@@ -18,6 +18,14 @@ agents:
     content: uri
     required: true
     doc: List of Slurm-web agents URL
+  version:
+    type: str
+    default: 3.0.0a1
+    doc: Version of Slurm-web agent API
+  racksdb_version:
+    type: str
+    default: 0.3.0
+    doc: Version of RacksDB API
 
 authentication:
   method:
@@ -37,6 +45,10 @@ ldap:
     type: path
     doc: Path to CA certificate
     ex: /path/to/certificate.pem
+  starttls:
+    type: bool
+    default: false
+    doc: Use STARTTLS protocol to negociate TLS connection with LDAP server
   user_base:
     type: str
     doc: Base DN for users entries
@@ -57,6 +69,17 @@ ldap:
     type: str
     default: cn
     doc: Group entry attribute for name
+  bind_dn:
+    type: str
+    doc: DN used to bind to the LDAP server
+    ex: cn=system,ou=people,dc=example,dc=org
+  bind_password:
+    type: str
+    doc: Password of bind DN
+  restricted_groups:
+    type: list
+    content: str
+    doc: List of users groups allowed to connect
 
 jwt:
   key:

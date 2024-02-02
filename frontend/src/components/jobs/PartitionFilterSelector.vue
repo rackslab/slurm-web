@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref, computed, watch } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import type { Ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRuntimeStore } from '@/stores/runtime'
-import { useGatewayAPI, type UserDescription } from '@/composables/GatewayAPI'
+import { useGatewayAPI } from '@/composables/GatewayAPI'
+import type { ClusterPartition } from '@/composables/GatewayAPI'
 import { AuthenticationError, PermissionError } from '@/composables/HTTPErrors'
 import { ChevronUpDownIcon, CheckIcon } from '@heroicons/vue/20/solid'
 
@@ -15,29 +16,33 @@ import {
   ComboboxOptions
 } from '@headlessui/vue'
 
+const props = defineProps({
+  cluster: {
+    type: String,
+    required: true
+  }
+})
+
 const runtimeStore = useRuntimeStore()
 const router = useRouter()
 const gateway = useGatewayAPI()
 const unable = ref(false)
 const query = ref('')
 
-const users: Ref<Array<UserDescription>> = ref([])
-const filteredUsers = computed(() =>
+const partitions: Ref<Array<ClusterPartition>> = ref([])
+const filteredPartitions = computed(() =>
   query.value === ''
-    ? users.value
-    : users.value.filter((user) => {
-        return (
-          user.fullname.toLowerCase().includes(query.value.toLowerCase()) ||
-          user.login.toLowerCase().includes(query.value.toLowerCase())
-        )
+    ? partitions.value
+    : partitions.value.filter((partition) => {
+        return partition.name.toLowerCase().includes(query.value.toLowerCase())
       })
 )
 
 function queryPlaceholder() {
-  if (runtimeStore.jobs.filters.users.length == 0) {
-    return 'Search user…'
+  if (runtimeStore.jobs.filters.partitions.length == 0) {
+    return 'Search partitions…'
   } else {
-    return runtimeStore.jobs.filters.users.join(', ')
+    return runtimeStore.jobs.filters.partitions.join(', ')
   }
 }
 
@@ -56,10 +61,10 @@ function reportOtherError(error: Error) {
   unable.value = true
 }
 
-async function getUsers() {
+async function getQos() {
   try {
     unable.value = false
-    users.value = await gateway.users()
+    partitions.value = await gateway.partitions(props.cluster)
   } catch (error: any) {
     if (error instanceof AuthenticationError) {
       reportAuthenticationError(error)
@@ -72,13 +77,13 @@ async function getUsers() {
 }
 
 onMounted(() => {
-  getUsers()
+  getQos()
 })
 </script>
 
 <template>
   <div class="relative mt-2">
-    <Combobox as="div" v-model="runtimeStore.jobs.filters.users" multiple>
+    <Combobox as="div" v-model="runtimeStore.jobs.filters.partitions" multiple>
       <ComboboxInput
         class="w-full rounded-md border-0 bg-white py-1.5 pl-3 pr-12 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-slurmweb sm:text-sm sm:leading-6"
         @change="query = $event.target.value"
@@ -91,13 +96,13 @@ onMounted(() => {
       </ComboboxButton>
 
       <ComboboxOptions
-        v-if="filteredUsers.length > 0"
+        v-if="filteredPartitions.length > 0"
         class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm"
       >
         <ComboboxOption
-          v-for="user in filteredUsers"
-          :key="user.login"
-          :value="user.login"
+          v-for="partition in filteredPartitions"
+          :key="partition.name"
+          :value="partition.name"
           as="template"
           v-slot="{ active, selected }"
         >
@@ -109,15 +114,7 @@ onMounted(() => {
           >
             <div class="flex">
               <span :class="['truncate', selected && 'font-semibold']">
-                {{ user.fullname }}
-              </span>
-              <span
-                :class="[
-                  'ml-2 truncate text-gray-500',
-                  active ? 'text-indigo-200' : 'text-gray-500'
-                ]"
-              >
-                {{ user.login }}
+                {{ partition.name }}
               </span>
             </div>
 

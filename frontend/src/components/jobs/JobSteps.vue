@@ -33,31 +33,31 @@ const current = computed((): [number, boolean] => {
 })
 
 function stepComment(step: string) {
-    if (step === "Submitted") {
-        return new Date(props.job.time.submission * 1000).toLocaleString()
+  if (step === 'Submitted') {
+    return new Date(props.job.time.submission * 1000).toLocaleString()
+  }
+  if (step === 'Eligible') {
+    return new Date(props.job.time.eligible * 1000).toLocaleString()
+  }
+  if (step === 'Scheduling') {
+    if (props.job.time.start) {
+      return new Date(props.job.time.start * 1000).toLocaleString()
     }
-    if (step === "Eligible") {
-        return new Date(props.job.time.eligible * 1000).toLocaleString()
+  }
+  if (step === 'Running') {
+    if (props.job.time.elapsed) {
+      return `${props.job.time.elapsed} seconds elapsed`
     }
-    if (step === "Scheduling") {
-        if (props.job.time.start) {
-            return new Date(props.job.time.start * 1000).toLocaleString()
-        }
+  }
+  if (step === 'Completing') {
+    return ''
+  }
+  if (step === 'Terminated') {
+    if (props.job.time.end) {
+      return new Date(props.job.time.end * 1000).toLocaleString()
     }
-    if (step === "Running") {
-        if (props.job.time.elapsed) {
-            return `${props.job.time.elapsed} seconds elapsed`
-        }
-    }
-    if (step === "Completing") {
-        return ""
-    }
-    if (step === "Terminated") {
-        if (props.job.time.end) {
-            return new Date(props.job.time.end * 1000).toLocaleString()
-        }
-    }
-    return ""
+  }
+  return ''
 }
 
 const steps = ['Submitted', 'Eligible', 'Scheduling', 'Running', 'Completing', 'Terminated']
@@ -90,7 +90,7 @@ const steps = ['Submitted', 'Eligible', 'Scheduling', 'Running', 'Completing', '
           </span>
         </div>
       </template>
-      <template v-else-if="current[0]+1 == stepIdx && current[1]">
+      <template v-else-if="current[0] + 1 == stepIdx && current[1]">
         <div
           v-if="stepIdx !== steps.length - 1"
           class="absolute left-4 top-4 -ml-px mt-0.5 h-full w-0.5 bg-gray-300"

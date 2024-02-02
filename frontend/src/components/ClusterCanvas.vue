@@ -28,9 +28,11 @@ async function updateCanvas() {
     var context = canvas.value.getContext('2d') as CanvasRenderingContext2D
     const image = await createImageBitmap(await gateway.infrastructureImagePng(props.cluster))
     const maxRatio = Math.max(image.height / canvas.value.height, image.width / canvas.value.width)
-    console.log(`image width ${image.width} height ${image.height} ratio ${maxRatio} canvas width ${canvas.value.width} height ${canvas.value.height}`)
-    const x = (canvas.value.width - (image.width / maxRatio)) / 2
-    const y = (canvas.value.height - (image.height / maxRatio)) / 2
+    console.log(
+      `image width ${image.width} height ${image.height} ratio ${maxRatio} canvas width ${canvas.value.width} height ${canvas.value.height}`
+    )
+    const x = (canvas.value.width - image.width / maxRatio) / 2
+    const y = (canvas.value.height - image.height / maxRatio) / 2
     context.drawImage(image, x, y, image.width / maxRatio, image.height / maxRatio)
   }
 }

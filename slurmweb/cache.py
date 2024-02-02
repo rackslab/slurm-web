@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-from typing import Union
+from typing import Union, Any
 
 import redis
 import pickle
@@ -18,10 +18,13 @@ class CachingService:
         self.port = port
         self.connection = redis.Redis(host=host, port=port, password=password)
 
-    def put(self, key, value):
+    def put(self, key: str, value: Any, expiration: int):
         try:
-            self.connection.set(key, pickle.dumps(value), ex=60)
-        except redis.exceptions.ConnectionError as err:
+            self.connection.set(key, pickle.dumps(value), ex=expiration)
+        except (
+            redis.exceptions.ConnectionError,
+            redis.exceptions.ResponseError,
+        ) as err:
             raise SlurmwebCacheError(str(err)) from err
 
     def get(self, key):
@@ -30,5 +33,8 @@ class CachingService:
             if value is not None:
                 value = pickle.loads(value)
             return value
-        except redis.exceptions.ConnectionError as err:
+        except (
+            redis.exceptions.ConnectionError,
+            redis.exceptions.ResponseError,
+        ) as err:
             raise SlurmwebCacheError(str(err)) from err

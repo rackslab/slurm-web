@@ -10,7 +10,7 @@ const router = useRouter()
 
 onMounted(() => {
   authStore.logout()
-  runtimeStore.reportError('You have been signed out')
+  runtimeStore.reportInfo('You have been signed out')
   router.push({ name: 'login' })
 })
 </script>

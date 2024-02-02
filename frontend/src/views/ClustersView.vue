@@ -3,13 +3,10 @@ import { onMounted, ref } from 'vue'
 import type { Ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useRuntimeStore } from '@/stores/runtime'
-import {
-  useGatewayAPI,
-  type ClusterDescription
-} from '@/composables/GatewayAPI'
+import { useGatewayAPI, type ClusterDescription } from '@/composables/GatewayAPI'
 import { AuthenticationError } from '@/composables/HTTPErrors'
 import { ChevronRightIcon, XCircleIcon } from '@heroicons/vue/20/solid'
-import { CpuChipIcon, PlayCircleIcon } from '@heroicons/vue/24/outline'
+import { CpuChipIcon, PlayCircleIcon, ArrowRightOnRectangleIcon } from '@heroicons/vue/24/outline'
 
 const runtimeStore = useRuntimeStore()
 const gateway = useGatewayAPI()
@@ -54,6 +51,16 @@ onMounted(() => {
 
 <template>
   <main>
+    <RouterLink :to="{ name: 'signout' }" custom v-slot="{ navigate }">
+      <button
+        @click="navigate"
+        role="link"
+        class="flex m-2 p-2 text-gray-600 hover:text-gray-800 absolute right-0"
+      >
+        Signout
+        <ArrowRightOnRectangleIcon class="h-6 w-6" />
+      </button>
+    </RouterLink>
     <section
       class="flex h-screen justify-center items-center gap-y-6 bg-slurmweb-light dark:bg-gray-900"
     >

@@ -11,6 +11,7 @@ from rfl.web.tokens import RFLTokenizedRBACWebApp
 from racksdb.web.app import RacksDBWebBlueprint
 
 from . import SlurmwebWebApp
+from ..version import get_version
 from ..views import SlurmwebAppRoute
 from ..views import agent as views
 from ..cache import CachingService
@@ -25,14 +26,15 @@ class SlurmwebAppAgent(SlurmwebWebApp, RFLTokenizedRBACWebApp):
     SETTINGS_DEFINITION = "/usr/share/slurm-web/agent.yml"
     VIEWS = {
         SlurmwebAppRoute("/version", views.version),
-        SlurmwebAppRoute("/info", views.info),
-        SlurmwebAppRoute("/permissions", views.permissions),
-        SlurmwebAppRoute("/stats", views.stats),
-        SlurmwebAppRoute("/jobs", views.jobs),
-        SlurmwebAppRoute("/job/<int:job>", views.job),
-        SlurmwebAppRoute("/nodes", views.nodes),
-        SlurmwebAppRoute("/qos", views.qos),
-        SlurmwebAppRoute("/accounts", views.accounts),
+        SlurmwebAppRoute(f"/v{get_version()}/info", views.info),
+        SlurmwebAppRoute(f"/v{get_version()}/permissions", views.permissions),
+        SlurmwebAppRoute(f"/v{get_version()}/stats", views.stats),
+        SlurmwebAppRoute(f"/v{get_version()}/jobs", views.jobs),
+        SlurmwebAppRoute(f"/v{get_version()}/job/<int:job>", views.job),
+        SlurmwebAppRoute(f"/v{get_version()}/nodes", views.nodes),
+        SlurmwebAppRoute(f"/v{get_version()}/partitions", views.partitions),
+        SlurmwebAppRoute(f"/v{get_version()}/qos", views.qos),
+        SlurmwebAppRoute(f"/v{get_version()}/accounts", views.accounts),
     }
 
     def __init__(self, args):

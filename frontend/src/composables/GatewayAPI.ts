@@ -1,8 +1,12 @@
 import { useHttp } from '@/plugins/http'
 import { useAuthStore } from '@/stores/auth'
 import type { ResponseType, AxiosResponse, AxiosRequestConfig } from 'axios'
-import { AuthenticationError, PermissionError, APIServerError, RequestError } from '@/composables/HTTPErrors'
-import { resolveTransitionHooks } from 'vue'
+import {
+  AuthenticationError,
+  PermissionError,
+  APIServerError,
+  RequestError
+} from '@/composables/HTTPErrors'
 
 interface loginIdents {
   user: string
@@ -56,6 +60,7 @@ export interface ClusterJob {
   job_state: string
   state_reason: string
   partition: string
+  priority: ClusterOptionalNumber
   qos: string
 }
 
@@ -144,6 +149,11 @@ export interface ClusterNode {
   partitions: Array<string>
 }
 
+export interface ClusterPartition {
+  name: string
+  node_sets: string
+}
+
 export interface ClusterQos {
   name: string
   description: string
@@ -159,7 +169,10 @@ export function useGatewayAPI() {
   const authStore = useAuthStore()
   let controller = new AbortController()
 
-  function requestConfig(withToken: boolean = true, responseType: ResponseType = "json"): AxiosRequestConfig {
+  function requestConfig(
+    withToken: boolean = true,
+    responseType: ResponseType = 'json'
+  ): AxiosRequestConfig {
     let config: AxiosRequestConfig = {
       responseType: responseType,
       signal: controller.signal
@@ -177,7 +190,7 @@ export function useGatewayAPI() {
       if (error.response) {
         /* Server replied with error status code */
         if (error.response.status == 401) {
-          throw new AuthenticationError(error.message)
+          throw new AuthenticationError(error.response.data.description)
         } else if (error.response.status == 403) {
           throw new PermissionError(error.message)
         } else {
@@ -193,7 +206,11 @@ export function useGatewayAPI() {
     }
   }
 
-  async function get<CType>(resource: string, withToken: boolean = true, responseType: ResponseType = "json"): Promise<CType> {
+  async function get<CType>(
+    resource: string,
+    withToken: boolean = true,
+    responseType: ResponseType = 'json'
+  ): Promise<CType> {
     console.log(`Slurm-web gateway API get ${resource}`)
     return (
       await requestServer(() => {
@@ -202,7 +219,12 @@ export function useGatewayAPI() {
     ).data as CType
   }
 
-  async function post<CType>(resource: string, data: any, withToken: boolean = true, responseType: ResponseType = "json"): Promise<CType> {
+  async function post<CType>(
+    resource: string,
+    data: any,
+    withToken: boolean = true,
+    responseType: ResponseType = 'json'
+  ): Promise<CType> {
     console.log(`Slurm-web gateway API post ${resource}`)
     return (
       await requestServer(() => {
@@ -247,6 +269,10 @@ export function useGatewayAPI() {
     return await get<ClusterNode[]>(`/agents/${cluster}/nodes`)
   }
 
+  async function partitions(cluster: string): Promise<ClusterPartition[]> {
+    return await get<ClusterPartition[]>(`/agents/${cluster}/partitions`)
+  }
+
   async function qos(cluster: string): Promise<ClusterQos[]> {
     return await get<ClusterQos[]>(`/agents/${cluster}/qos`)
   }
@@ -257,7 +283,12 @@ export function useGatewayAPI() {
 
   async function infrastructureImagePng(cluster: string): Promise<RacksDBAPIImage> {
     return new Blob([
-      await post<ArrayBuffer>(`/agents/${cluster}/racksdb/draw/infrastructure/${cluster}.png`, {}, false, "arraybuffer")
+      await post<ArrayBuffer>(
+        `/agents/${cluster}/racksdb/draw/infrastructure/${cluster}.png`,
+        {},
+        false,
+        'arraybuffer'
+      )
     ]) as RacksDBAPIImage
   }
 
@@ -268,5 +299,18 @@ export function useGatewayAPI() {
     controller = new AbortController()
   }
 
-  return { login, clusters, users, stats, jobs, job, nodes, qos, accounts, infrastructureImagePng, abort }
+  return {
+    login,
+    clusters,
+    users,
+    stats,
+    jobs,
+    job,
+    nodes,
+    partitions,
+    qos,
+    accounts,
+    infrastructureImagePng,
+    abort
+  }
 }

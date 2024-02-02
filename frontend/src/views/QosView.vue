@@ -2,6 +2,7 @@
 import ClusterMainLayout from '@/components/ClusterMainLayout.vue'
 import { useClusterDataPoller } from '@/composables/DataPoller'
 import type { ClusterQos } from '@/composables/GatewayAPI'
+
 const props = defineProps({
   cluster: {
     type: String,

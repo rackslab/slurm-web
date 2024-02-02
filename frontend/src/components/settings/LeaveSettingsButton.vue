@@ -13,7 +13,7 @@ function leaveSettings() {
     router.push(from)
   } else {
     if (runtimeStore.currentCluster) {
-      router.push({ name: 'dashboard', params: { cluster: runtimeStore.currentCluster } })
+      router.push({ name: 'dashboard', params: { cluster: runtimeStore.currentCluster.name } })
     } else {
       router.push({ name: 'clusters' })
     }

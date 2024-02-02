@@ -30,7 +30,7 @@ const runtimeStore = useRuntimeStore()
               <div class="flex-shrink-0">
                 <CheckCircleIcon
                   v-if="notification.type == 'INFO'"
-                  class="h-6 w-6 text-green-400"
+                  class="h-6 w-6 text-green-700"
                   aria-hidden="true"
                 />
                 <XCircleIcon
@@ -47,7 +47,7 @@ const runtimeStore = useRuntimeStore()
                 <button
                   type="button"
                   @click="runtimeStore.removeNotification(notification)"
-                  class="inline-flex rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                  class="inline-flex rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-slurmweb focus:ring-offset-2"
                 >
                   <span class="sr-only">Close</span>
                   <XMarkIcon class="h-5 w-5" aria-hidden="true" />

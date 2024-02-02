@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch, computed } from 'vue'
+import { onMounted, ref, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import type { LocationQueryRaw } from 'vue-router'
 import { useRuntimeStore } from '@/stores/runtime'
+import type { JobSortCriterion, JobSortOrder } from '@/stores/runtime'
 import { useClusterDataPoller } from '@/composables/DataPoller'
 import type { ClusterJob } from '@/composables/GatewayAPI'
 import JobsSorter from '@/components/jobs/JobsSorter.vue'
@@ -10,6 +11,8 @@ import JobStatusLabel from '@/components/jobs/JobStatusLabel.vue'
 import ClusterMainLayout from '@/components/ClusterMainLayout.vue'
 import UserFilterSelector from '@/components/jobs/UserFilterSelector.vue'
 import AccountFilterSelector from '@/components/jobs/AccountFilterSelector.vue'
+import QosFilterSelector from '@/components/jobs/QosFilterSelector.vue'
+import PartitionFilterSelector from '@/components/jobs/PartitionFilterSelector.vue'
 
 import {
   Dialog,
@@ -28,7 +31,9 @@ import {
   UserIcon,
   UsersIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  SwatchIcon,
+  RectangleGroupIcon
 } from '@heroicons/vue/20/solid'
 
 const props = defineProps({
@@ -48,7 +53,7 @@ const open = ref(false)
 const route = useRoute()
 const { data, unable, loaded } = useClusterDataPoller<ClusterJob[]>('jobs', 5000, props)
 
-function computeSortJobs() {
+const sortedJobs = computed(() => {
   console.log(`Computing sorted jobs by ${runtimeStore.jobs.sort}`)
   if (data.value) {
     // https://vuejs.org/guide/essentials/list.html#displaying-filtered-sorted-results
@@ -58,27 +63,50 @@ function computeSortJobs() {
     result = result.sort((a, b) => {
       if (runtimeStore.jobs.sort == 'user') {
         if (a.user_name > b.user_name) {
-          return 1
+          return runtimeStore.jobs.order == 'asc' ? 1 : -1
         }
         if (a.user_name < b.user_name) {
-          return -1
+          return runtimeStore.jobs.order == 'asc' ? -1 : 1
         }
         return 0
       } else if (runtimeStore.jobs.sort == 'state') {
         if (a.job_state > b.job_state) {
-          return 1
+          return runtimeStore.jobs.order == 'asc' ? 1 : -1
         }
         if (a.job_state < b.job_state) {
-          return -1
+          return runtimeStore.jobs.order == 'asc' ? -1 : 1
+        }
+        return 0
+      } else if (runtimeStore.jobs.sort == 'priority') {
+        if (!a.priority.set) {
+          if (b.priority.set) {
+            return runtimeStore.jobs.order == 'asc' ? -1 : 1
+          }
+          return 0
+        }
+        if (!b.priority.set) {
+          return runtimeStore.jobs.order == 'asc' ? 1 : -1
+        }
+        if (a.priority.infinite) {
+          if (!b.priority.infinite) {
+            return runtimeStore.jobs.order == 'asc' ? 1 : -1
+          }
+          return 0
+        }
+        if (a.priority.number > b.priority.number) {
+          return runtimeStore.jobs.order == 'asc' ? 1 : -1
+        }
+        if (a.priority.number < b.priority.number) {
+          return runtimeStore.jobs.order == 'asc' ? -1 : 1
         }
         return 0
       } else {
         // by default, sort by id
         if (a.job_id > b.job_id) {
-          return 1
+          return runtimeStore.jobs.order == 'asc' ? 1 : -1
         }
         if (a.job_id < b.job_id) {
-          return -1
+          return runtimeStore.jobs.order == 'asc' ? -1 : 1
         }
         return 0
       }
@@ -87,9 +115,6 @@ function computeSortJobs() {
   } else {
     return []
   }
-}
-const sortedJobs = computed(() => {
-  return computeSortJobs()
 })
 
 const lastpage = computed(() => {
@@ -106,31 +131,13 @@ const router = useRouter()
 
 const runtimeStore = useRuntimeStore()
 
-function removeStateFilter(state: string) {
-  runtimeStore.jobs.filters.states = runtimeStore.jobs.filters.states.filter(
-    (element) => element != state
-  )
-}
-
-function removeUserFilter(user: string) {
-  runtimeStore.jobs.filters.users = runtimeStore.jobs.filters.users.filter(
-    (element) => element != user
-  )
-}
-
-function removeAccountFilter(account: string) {
-  runtimeStore.jobs.filters.accounts = runtimeStore.jobs.filters.accounts.filter(
-    (element) => element != account
-  )
-}
-
 function sortJobs() {
   /*
    * Triggered by sort emit of JobsSorter component to update route and resort
    * the jobs with the new criteria.
    */
   updateQueryParameters()
-  console.log(`Sorting jobs by ${runtimeStore.jobs.sort}`)
+  console.log(`Sorting jobs by ${runtimeStore.jobs.sort} ordered ${runtimeStore.jobs.order}`)
 }
 
 function updateQueryParameters() {
@@ -160,6 +167,18 @@ watch(
 )
 watch(
   () => runtimeStore.jobs.filters.accounts,
+  () => {
+    updateQueryParameters()
+  }
+)
+watch(
+  () => runtimeStore.jobs.filters.qos,
+  () => {
+    updateQueryParameters()
+  }
+)
+watch(
+  () => runtimeStore.jobs.filters.partitions,
   () => {
     updateQueryParameters()
   }
@@ -211,11 +230,17 @@ const range = (start: number, stop: number, step: number) =>
 
 onMounted(() => {
   if (
-    ['sort', 'states', 'users', 'accounts', 'page'].some((parameter) => parameter in route.query)
+    ['sort', 'states', 'users', 'accounts', 'page', 'qos', 'partitions'].some(
+      (parameter) => parameter in route.query
+    )
   ) {
-    if (route.query.sort) {
+    if (route.query.sort && runtimeStore.jobs.isValidSortCriterion(route.query.sort)) {
       /* Retrieve the sort criteria from query and update the store */
-      runtimeStore.jobs.sort = route.query.sort as string
+      runtimeStore.jobs.sort = route.query.sort as JobSortCriterion
+    }
+    if (route.query.order && runtimeStore.jobs.isValidSortOrder(route.query.order)) {
+      /* Retrieve the sort order from query and update the store */
+      runtimeStore.jobs.order = route.query.order as JobSortOrder
     }
     if (route.query.page) {
       /* Retrieve the page number from query and update the store. If the
@@ -241,6 +266,14 @@ onMounted(() => {
     if (route.query.accounts) {
       /* Retrieve the account filters from query and update the store */
       runtimeStore.jobs.filters.accounts = (route.query.accounts as string).split(',')
+    }
+    if (route.query.qos) {
+      /* Retrieve the qos filters from query and update the store */
+      runtimeStore.jobs.filters.qos = (route.query.qos as string).split(',')
+    }
+    if (route.query.partitions) {
+      /* Retrieve the partitions filters from query and update the store */
+      runtimeStore.jobs.filters.partitions = (route.query.partitions as string).split(',')
     }
   } else {
     /* Route has no query parameter. Update query parameters to match those that
@@ -373,6 +406,7 @@ onMounted(() => {
                     </DisclosurePanel>
                   </Disclosure>
                   <Disclosure
+                    v-if="runtimeStore.hasPermission('view-accounts')"
                     as="div"
                     class="border-t border-t-gray-200 px-4 py-6"
                     v-slot="{ open }"
@@ -397,6 +431,62 @@ onMounted(() => {
                     </h3>
                     <DisclosurePanel class="pt-6">
                       <AccountFilterSelector :cluster="props.cluster" />
+                    </DisclosurePanel>
+                  </Disclosure>
+                  <Disclosure
+                    v-if="runtimeStore.hasPermission('view-qos')"
+                    as="div"
+                    class="border-t border-t-gray-200 px-4 py-6"
+                    v-slot="{ open }"
+                  >
+                    <h3 class="-mx-2 -my-3 flow-root">
+                      <DisclosureButton
+                        class="flex w-full items-center justify-between bg-white px-2 py-3 text-sm text-gray-400"
+                      >
+                        <span class="flex">
+                          <SwatchIcon
+                            class="h-8 w-8 -mt-1 -ml-1 mr-2 bg-purple-500 text-white rounded-full p-2"
+                          />
+                          <span class="font-medium text-gray-900">QOS</span>
+                        </span>
+                        <span class="ml-6 flex items-center">
+                          <ChevronDownIcon
+                            :class="[open ? '-rotate-180' : 'rotate-0', 'h-5 w-5 transform']"
+                            aria-hidden="true"
+                          />
+                        </span>
+                      </DisclosureButton>
+                    </h3>
+                    <DisclosurePanel class="pt-6">
+                      <QosFilterSelector :cluster="props.cluster" />
+                    </DisclosurePanel>
+                  </Disclosure>
+                  <Disclosure
+                    v-if="runtimeStore.hasPermission('view-partitions')"
+                    as="div"
+                    class="border-t border-t-gray-200 px-4 py-6"
+                    v-slot="{ open }"
+                  >
+                    <h3 class="-mx-2 -my-3 flow-root">
+                      <DisclosureButton
+                        class="flex w-full items-center justify-between bg-white px-2 py-3 text-sm text-gray-400"
+                      >
+                        <span class="flex">
+                          <RectangleGroupIcon
+                            class="h-8 w-8 -mt-1 -ml-1 mr-2 bg-amber-700 text-white rounded-full p-2"
+                          />
+                          <span class="font-medium text-gray-900">Partitions</span>
+                        </span>
+                        <span class="ml-6 flex items-center">
+                          <ChevronDownIcon
+                            :class="[open ? '-rotate-180' : 'rotate-0', 'h-5 w-5 transform']"
+                            aria-hidden="true"
+                          />
+                        </span>
+                      </DisclosureButton>
+                    </h3>
+                    <DisclosurePanel class="pt-6">
+                      <PartitionFilterSelector :cluster="props.cluster" />
                     </DisclosurePanel>
                   </Disclosure>
                 </form>
@@ -461,7 +551,7 @@ onMounted(() => {
                   <button
                     type="button"
                     class="ml-1 inline-flex h-4 w-4 flex-shrink-0 rounded-full p-1 text-gray-400 hover:bg-gray-700 hover:text-gray-500"
-                    @click="removeStateFilter(activeStateFilter)"
+                    @click="runtimeStore.jobs.removeStateFilter(activeStateFilter)"
                   >
                     <span class="sr-only">Remove filter for state:{{ activeStateFilter }}</span>
                     <svg class="h-2 w-2" stroke="currentColor" fill="none" viewBox="0 0 8 8">
@@ -479,7 +569,7 @@ onMounted(() => {
                   <button
                     type="button"
                     class="ml-1 inline-flex h-4 w-4 flex-shrink-0 rounded-full p-1 text-emerald-600 hover:bg-emerald-600 hover:text-emerald-700"
-                    @click="removeUserFilter(activeUserFilter)"
+                    @click="runtimeStore.jobs.removeUserFilter(activeUserFilter)"
                   >
                     <span class="sr-only">Remove filter for user:{{ activeUserFilter }}</span>
                     <svg class="h-2 w-2" stroke="currentColor" fill="none" viewBox="0 0 8 8">
@@ -497,9 +587,47 @@ onMounted(() => {
                   <button
                     type="button"
                     class="ml-1 inline-flex h-4 w-4 flex-shrink-0 rounded-full p-1 text-yellow-600 hover:bg-yellow-600 hover:text-yellow-700"
-                    @click="removeAccountFilter(activeAccountFilter)"
+                    @click="runtimeStore.jobs.removeAccountFilter(activeAccountFilter)"
                   >
                     <span class="sr-only">Remove filter for account:{{ activeAccountFilter }}</span>
+                    <svg class="h-2 w-2" stroke="currentColor" fill="none" viewBox="0 0 8 8">
+                      <path stroke-linecap="round" stroke-width="1.5" d="M1 1l6 6m0-6L1 7" />
+                    </svg>
+                  </button>
+                </span>
+                <span
+                  v-for="activeQosFilter in runtimeStore.jobs.filters.qos"
+                  :key="activeQosFilter"
+                  class="m-1 inline-flex items-center rounded-full border border-gray-200 bg-purple-500 text-white py-1.5 pl-3 pr-2 text-sm font-medium"
+                >
+                  <SwatchIcon class="h-4 w-4 mr-1" />
+                  <span>{{ activeQosFilter }}</span>
+                  <button
+                    type="button"
+                    class="ml-1 inline-flex h-4 w-4 flex-shrink-0 rounded-full p-1 text-purple-600 hover:bg-purple-600 hover:text-purple-700"
+                    @click="runtimeStore.jobs.removeQosFilter(activeQosFilter)"
+                  >
+                    <span class="sr-only">Remove filter for qos:{{ activeQosFilter }}</span>
+                    <svg class="h-2 w-2" stroke="currentColor" fill="none" viewBox="0 0 8 8">
+                      <path stroke-linecap="round" stroke-width="1.5" d="M1 1l6 6m0-6L1 7" />
+                    </svg>
+                  </button>
+                </span>
+                <span
+                  v-for="activePartitionFilter in runtimeStore.jobs.filters.partitions"
+                  :key="activePartitionFilter"
+                  class="m-1 inline-flex items-center rounded-full border border-gray-200 bg-amber-700 text-white py-1.5 pl-3 pr-2 text-sm font-medium"
+                >
+                  <RectangleGroupIcon class="h-4 w-4 mr-1" />
+                  <span>{{ activePartitionFilter }}</span>
+                  <button
+                    type="button"
+                    class="ml-1 inline-flex h-4 w-4 flex-shrink-0 rounded-full p-1 text-amber-800 hover:bg-amber-800 hover:text-amber-900"
+                    @click="runtimeStore.jobs.removePartitionFilter(activePartitionFilter)"
+                  >
+                    <span class="sr-only"
+                      >Remove filter for partition:{{ activePartitionFilter }}</span
+                    >
                     <svg class="h-2 w-2" stroke="currentColor" fill="none" viewBox="0 0 8 8">
                       <path stroke-linecap="round" stroke-width="1.5" d="M1 1l6 6m0-6L1 7" />
                     </svg>
@@ -513,9 +641,7 @@ onMounted(() => {
 
       <div class="mt-8 flow-root">
         <div v-if="unable">Unable to get jobs</div>
-        <div v-else-if="!loaded" class="mx-4">
-          Loading jobs…
-        </div>
+        <div v-else-if="!loaded" class="mx-4">Loading jobs…</div>
         <div v-else-if="sortedJobs.length" class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div class="inline-block min-w-full py-2 align-middle">
             <table class="min-w-full divide-y divide-gray-300">
