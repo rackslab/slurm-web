@@ -203,6 +203,10 @@ racksdb:
     type: path
     default: /usr/share/racksdb/schemas/drawings.yml
     doc: Path to RacksDB database schema
+  tags:
+    type: list
+    content: str
+    doc: List of tags applied to compute nodes in RacksDB database
 
 cache:
   enabled:

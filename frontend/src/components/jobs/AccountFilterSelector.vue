@@ -1,10 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref, computed, watch } from 'vue'
-import type { Ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed } from 'vue'
 import { useRuntimeStore } from '@/stores/runtime'
-import { useGatewayAPI, type AccountDescription } from '@/composables/GatewayAPI'
-import { AuthenticationError, PermissionError } from '@/composables/HTTPErrors'
+import { useClusterDataGetter } from '@/composables/DataGetter'
+import type { AccountDescription } from '@/composables/GatewayAPI'
 import { ChevronUpDownIcon, CheckIcon } from '@heroicons/vue/20/solid'
 
 import {
@@ -23,19 +21,16 @@ const props = defineProps({
 })
 
 const runtimeStore = useRuntimeStore()
-const router = useRouter()
-const gateway = useGatewayAPI()
-const unable = ref(false)
 const query = ref('')
 
-const accounts: Ref<Array<AccountDescription>> = ref([])
-const filteredAccounts = computed(() =>
-  query.value === ''
-    ? accounts.value
-    : accounts.value.filter((account) => {
-        return account.name.toLowerCase().includes(query.value.toLowerCase())
-      })
-)
+const filteredAccounts = computed(() => {
+  if (!data.value) {
+    return []
+  }
+  return query.value === ''
+    ? data.value
+    : data.value.filter((account) => account.name.toLowerCase().includes(query.value.toLowerCase()))
+})
 
 function queryPlaceholder() {
   if (runtimeStore.jobs.filters.accounts.length == 0) {
@@ -45,39 +40,7 @@ function queryPlaceholder() {
   }
 }
 
-function reportAuthenticationError(error: AuthenticationError) {
-  runtimeStore.reportError(`Authentication error: ${error.message}`)
-  router.push({ name: 'login' })
-}
-
-function reportPermissionError(error: PermissionError) {
-  runtimeStore.reportError(`Permission error: ${error.message}`)
-  unable.value = true
-}
-
-function reportOtherError(error: Error) {
-  runtimeStore.reportError(`Server error: ${error.message}`)
-  unable.value = true
-}
-
-async function getAccounts() {
-  try {
-    unable.value = false
-    accounts.value = await gateway.accounts(props.cluster)
-  } catch (error: any) {
-    if (error instanceof AuthenticationError) {
-      reportAuthenticationError(error)
-    } else if (error instanceof PermissionError) {
-      reportPermissionError(error)
-    } else {
-      reportOtherError(error)
-    }
-  }
-}
-
-onMounted(() => {
-  getAccounts()
-})
+const { data } = useClusterDataGetter<AccountDescription[]>('accounts', props)
 </script>
 
 <template>

@@ -1,11 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
-import type { Ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed } from 'vue'
 import { useRuntimeStore } from '@/stores/runtime'
-import { useGatewayAPI } from '@/composables/GatewayAPI'
+import { useClusterDataGetter } from '@/composables/DataGetter'
 import type { ClusterPartition } from '@/composables/GatewayAPI'
-import { AuthenticationError, PermissionError } from '@/composables/HTTPErrors'
 import { ChevronUpDownIcon, CheckIcon } from '@heroicons/vue/20/solid'
 
 import {
@@ -24,19 +21,18 @@ const props = defineProps({
 })
 
 const runtimeStore = useRuntimeStore()
-const router = useRouter()
-const gateway = useGatewayAPI()
-const unable = ref(false)
 const query = ref('')
 
-const partitions: Ref<Array<ClusterPartition>> = ref([])
-const filteredPartitions = computed(() =>
-  query.value === ''
-    ? partitions.value
-    : partitions.value.filter((partition) => {
-        return partition.name.toLowerCase().includes(query.value.toLowerCase())
-      })
-)
+const filteredPartitions = computed(() => {
+  if (!data.value) {
+    return []
+  }
+  return query.value === ''
+    ? data.value
+    : data.value.filter((partition) =>
+        partition.name.toLowerCase().includes(query.value.toLowerCase())
+      )
+})
 
 function queryPlaceholder() {
   if (runtimeStore.jobs.filters.partitions.length == 0) {
@@ -46,39 +42,7 @@ function queryPlaceholder() {
   }
 }
 
-function reportAuthenticationError(error: AuthenticationError) {
-  runtimeStore.reportError(`Authentication error: ${error.message}`)
-  router.push({ name: 'login' })
-}
-
-function reportPermissionError(error: PermissionError) {
-  runtimeStore.reportError(`Permission error: ${error.message}`)
-  unable.value = true
-}
-
-function reportOtherError(error: Error) {
-  runtimeStore.reportError(`Server error: ${error.message}`)
-  unable.value = true
-}
-
-async function getQos() {
-  try {
-    unable.value = false
-    partitions.value = await gateway.partitions(props.cluster)
-  } catch (error: any) {
-    if (error instanceof AuthenticationError) {
-      reportAuthenticationError(error)
-    } else if (error instanceof PermissionError) {
-      reportPermissionError(error)
-    } else {
-      reportOtherError(error)
-    }
-  }
-}
-
-onMounted(() => {
-  getQos()
-})
+const { data } = useClusterDataGetter<ClusterPartition[]>('partitions', props)
 </script>
 
 <template>

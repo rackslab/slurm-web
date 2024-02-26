@@ -45,6 +45,9 @@ class SlurmwebAppAgent(SlurmwebWebApp, RFLTokenizedRBACWebApp):
                 ext=self.settings.racksdb.extensions,
                 schema=self.settings.racksdb.schema,
                 drawings_schema=self.settings.racksdb.drawings_schema,
+                default_drawing_parameters={
+                    "infrastructure": {"equipment_tags": self.settings.racksdb.tags}
+                },
             ),
             url_prefix="/racksdb",
         )

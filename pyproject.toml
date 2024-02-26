@@ -15,7 +15,7 @@ authors = [
 dependencies = [
     "Flask",
     "Flask-Cors",
-    "RacksDB",
+    "RacksDB[web]",
     "redis",
     "requests",
     "RFL.authentication",

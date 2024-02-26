@@ -11,20 +11,27 @@
 - [ ] QOS list page
 - [x] Logout button in clusters page
 - [x] Signout notification as info instead of error
-- [ ] Refactor queryers and error handlers in jobs filters components
+- [x] Refactor queryers and error handlers in jobs filters components
 - [x] Tests user permission in jobs filter panel
 - [x] Move remove*Filter() functions in runtimeStore
+- [ ] Fix npm run lint warnings and errors
+- [ ] Add copyright header in all pages
 - [ ] Advanced reservations page
-- [ ] Formatted nodes list
+- [x] Formatted nodes list
+- [ ] Group consecutive nodes in nodes table
 - [ ] Nodes filtering by partition
 - [ ] Nodes filtering by state
 - [ ] Node details page
-- [ ] Filter nodes by tags in infrastructure graphical representation
-- [ ] Responsive pixel perfect infrastructure graphical representation
-- [ ] Multi-part reponse to get positions with infrastructure graphical representation
-- [ ] Add hover node labels in infrastructure graphical representation
-- [ ] Display nodes states in infrastructure graphical representation
-- [ ] Button to display infrastructure graphical representation in fullscreen
+- [x] Filter nodes by tags in infrastructure graphical representation
+- [x] Show spinner while loading infrastructure graphical representation 
+- [x] Responsive pixel perfect infrastructure graphical representation
+- [x] Multi-part reponse to get positions with infrastructure graphical
+      representation
+- [x] Add hover node labels in infrastructure graphical representation
+- [x] Display nodes states in infrastructure graphical representation
+- [x] Button to display infrastructure graphical representation in fullscreen
+- [ ] Click on node in infrastructure graphical representation to open node
+      details page
 - [ ] RPM/deb packages
 - [ ] Deterministic sort of TailwindCSS classes
 

@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { onMounted, ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import type { Ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { useRuntimeStore } from '@/stores/runtime'
-import { useGatewayAPI, type UserDescription } from '@/composables/GatewayAPI'
-import { AuthenticationError, PermissionError } from '@/composables/HTTPErrors'
+import { useGatewayDataGetter } from '@/composables/DataGetter'
+import type { UserDescription } from '@/composables/GatewayAPI'
 import { ChevronUpDownIcon, CheckIcon } from '@heroicons/vue/20/solid'
 
 import {
@@ -16,22 +15,22 @@ import {
 } from '@headlessui/vue'
 
 const runtimeStore = useRuntimeStore()
-const router = useRouter()
-const gateway = useGatewayAPI()
-const unable = ref(false)
+
 const query = ref('')
 
-const users: Ref<Array<UserDescription>> = ref([])
-const filteredUsers = computed(() =>
-  query.value === ''
-    ? users.value
-    : users.value.filter((user) => {
+const filteredUsers = computed(() => {
+  if (!data.value) {
+    return []
+  }
+  return query.value === ''
+    ? data.value
+    : data.value.filter((user) => {
         return (
           user.fullname.toLowerCase().includes(query.value.toLowerCase()) ||
           user.login.toLowerCase().includes(query.value.toLowerCase())
         )
       })
-)
+})
 
 function queryPlaceholder() {
   if (runtimeStore.jobs.filters.users.length == 0) {
@@ -41,39 +40,7 @@ function queryPlaceholder() {
   }
 }
 
-function reportAuthenticationError(error: AuthenticationError) {
-  runtimeStore.reportError(`Authentication error: ${error.message}`)
-  router.push({ name: 'login' })
-}
-
-function reportPermissionError(error: PermissionError) {
-  runtimeStore.reportError(`Permission error: ${error.message}`)
-  unable.value = true
-}
-
-function reportOtherError(error: Error) {
-  runtimeStore.reportError(`Server error: ${error.message}`)
-  unable.value = true
-}
-
-async function getUsers() {
-  try {
-    unable.value = false
-    users.value = await gateway.users()
-  } catch (error: any) {
-    if (error instanceof AuthenticationError) {
-      reportAuthenticationError(error)
-    } else if (error instanceof PermissionError) {
-      reportPermissionError(error)
-    } else {
-      reportOtherError(error)
-    }
-  }
-}
-
-onMounted(() => {
-  getUsers()
-})
+const { data } = useGatewayDataGetter<UserDescription[]>('users')
 </script>
 
 <template>

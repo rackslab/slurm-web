@@ -7,6 +7,7 @@ import {
   APIServerError,
   RequestError
 } from '@/composables/HTTPErrors'
+import type { AreaHTMLAttributes } from 'vue'
 
 interface loginIdents {
   user: string
@@ -161,8 +162,16 @@ export interface ClusterQos {
 
 export type RacksDBAPIImage = ImageBitmapSource
 export type RacksDBAPIResult = RacksDBAPIImage
-
-export type GatewayAPIKey = 'stats' | 'jobs' | 'job' | 'nodes' | 'qos' | 'accounts'
+export type RacksDBInfrastructureCoordinates = Record<string, [number, number, number, number]>
+export type GatewayGenericAPIKey = 'clusters' | 'users'
+export type GatewayClusterAPIKey =
+  | 'stats'
+  | 'jobs'
+  | 'job'
+  | 'nodes'
+  | 'partitions'
+  | 'qos'
+  | 'accounts'
 
 export function useGatewayAPI() {
   const http = useHttp()
@@ -173,7 +182,7 @@ export function useGatewayAPI() {
     withToken: boolean = true,
     responseType: ResponseType = 'json'
   ): AxiosRequestConfig {
-    let config: AxiosRequestConfig = {
+    const config: AxiosRequestConfig = {
       responseType: responseType,
       signal: controller.signal
     }
@@ -233,6 +242,18 @@ export function useGatewayAPI() {
     ).data as CType
   }
 
+  async function postRaw<CType>(
+    resource: string,
+    data: any,
+    withToken: boolean = true,
+    responseType: ResponseType = 'json'
+  ): Promise<CType> {
+    console.log(`Slurm-web gateway API post ${resource}`)
+    return (await requestServer(() => {
+      return http.post(resource, data, requestConfig(withToken, responseType))
+    })) as CType
+  }
+
   async function login(idents: loginIdents): Promise<GatewayLoginResponse> {
     try {
       return (await post('/login', idents)) as GatewayLoginResponse
@@ -281,15 +302,28 @@ export function useGatewayAPI() {
     return await get<AccountDescription[]>(`/agents/${cluster}/accounts`)
   }
 
-  async function infrastructureImagePng(cluster: string): Promise<RacksDBAPIImage> {
-    return new Blob([
-      await post<ArrayBuffer>(
-        `/agents/${cluster}/racksdb/draw/infrastructure/${cluster}.png`,
-        {},
-        false,
-        'arraybuffer'
-      )
-    ]) as RacksDBAPIImage
+  async function infrastructureImagePng(
+    cluster: string,
+    width: number,
+    height: number
+  ): Promise<[RacksDBAPIImage, RacksDBInfrastructureCoordinates]> {
+    const response = await postRaw<AxiosResponse>(
+      `/agents/${cluster}/racksdb/draw/infrastructure/${cluster}.png?coordinates`,
+      {
+        general: { pixel_perfect: true },
+        dimensions: { width: width, height: height },
+        infrastructure: { equipment_labels: false, ghost_unselected: true }
+      },
+      false,
+      'arraybuffer'
+    )
+    // parse multipart response with Response.formData()
+    const multipart = await new Response(response.data, {
+      headers: response.headers as HeadersInit
+    }).formData()
+    const image = multipart.get('image')
+    const coordinates = JSON.parse(await (multipart.get('coordinates') as File)?.text())
+    return [image as RacksDBAPIImage, coordinates as RacksDBInfrastructureCoordinates]
   }
 
   function abort() {
