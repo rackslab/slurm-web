@@ -332,3 +332,9 @@ cache:
     type: int
     default: 60
     doc: Expiration delay in seconds for accounts in cache
+
+job-templates:
+  db:
+    type: path
+    default: /var/lib/slurm-web/db/job-templates.db
+  
