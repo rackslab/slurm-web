@@ -43,10 +43,10 @@ class Types(BaseModel):
 class Inputs(BaseModel):
     name = CharField(max_length=50, unique=True)
     description = CharField(max_length=100)
-    default = CharField(max_length=45)
-    minVal = FloatField()
-    maxVal = FloatField()
-    regex = CharField(max_length=100)
+    default = CharField(null=True, max_length=45)
+    minVal = FloatField(null=True)
+    maxVal = FloatField(null=True)
+    regex = CharField(null=True, max_length=100)
     template = ForeignKeyField(Templates, backref="inputs")
     type = ForeignKeyField(Types, backref="inputs")
 
