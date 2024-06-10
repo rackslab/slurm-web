@@ -7,3 +7,4 @@ generated-doc
 node_modules
 /frontend/dist
 /docs/man/*.1
+data_test.py
