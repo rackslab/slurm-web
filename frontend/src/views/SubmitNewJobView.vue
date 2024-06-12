@@ -8,6 +8,7 @@
 
 <script setup lang="ts">
 import ClusterMainLayout from '@/components/ClusterMainLayout.vue'
+import CardTemplate from '@/components/CardTemplate.vue'
 import { ChevronLeftIcon } from '@heroicons/vue/20/solid'
 
 const props = defineProps({
@@ -33,6 +34,25 @@ const props = defineProps({
     <div class="text-center">
       <p class="text-lg font-bold">Submit new job</p>
       <p>Select a template to submit a new job</p>
+    </div>
+
+    <div class="flex flex-wrap justify-center">
+      <CardTemplate
+        title="etiam sit amet"
+        description="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+      />
+      <CardTemplate
+        title="nulla facilisi etiam"
+        description="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+      />
+      <CardTemplate
+        title="a condimentum vitae"
+        description="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+      />
+      <CardTemplate
+        title="ultrices dui sapien"
+        description="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+      />
     </div>
   </ClusterMainLayout>
 </template>
