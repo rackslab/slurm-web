@@ -35,28 +35,17 @@ const props = defineProps({
       </button></router-link
     >
 
-    <div class="text-center">
-      <p class="text-lg font-bold">Submit new job</p>
-      <p>Select a template to submit a new job</p>
-    </div>
+    <div class="flex justify-center">
+      <div class="flex flex-col pt-10">
+        <p class="text-lg font-bold">Submit new job</p>
+        <p>Select a template to submit a new job</p>
 
-    <div class="flex flex-wrap justify-center">
-      <CardTemplate
-        title="etiam sit amet"
-        description="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
-      />
-      <CardTemplate
-        title="nulla facilisi etiam"
-        description="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
-      />
-      <CardTemplate
-        title="a condimentum vitae"
-        description="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
-      />
-      <CardTemplate
-        title="ultrices dui sapien"
-        description="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
-      />
+        <div class="flex">
+          <div v-for="template in data" :key="template.name">
+            <CardTemplate :title="template.name" :description="template.description" />
+          </div>
+        </div>
+      </div>
     </div>
   </ClusterMainLayout>
 </template>
