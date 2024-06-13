@@ -10,6 +10,10 @@
 import ClusterMainLayout from '@/components/ClusterMainLayout.vue'
 import CardTemplate from '@/components/CardTemplate.vue'
 import { ChevronLeftIcon } from '@heroicons/vue/20/solid'
+import { useClusterDataPoller } from '@/composables/DataPoller'
+import type { Template } from '@/composables/GatewayAPI'
+
+const { data } = useClusterDataPoller<Template[]>('templates', 5000)
 
 const props = defineProps({
   cluster: {
