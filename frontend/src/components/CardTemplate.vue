@@ -7,7 +7,7 @@
 -->
 
 <script setup lang="ts">
-import { PencilIcon } from '@heroicons/vue/20/solid'
+import { ChevronRightIcon } from '@heroicons/vue/20/solid'
 
 const props = defineProps({
   title: {
@@ -45,8 +45,8 @@ const props = defineProps({
       <button
         class="flex w-full items-center justify-center rounded-b-lg py-3 font-medium transition duration-200 ease-in-out hover:bg-slurmweb hover:text-white dark:bg-gray-700"
       >
-        <PencilIcon class="-ml-0.5 mr-1 h-5 w-5" />
         Select
+        <ChevronRightIcon class="ml-1 h-5 w-5" />
       </button>
     </div>
   </div>
