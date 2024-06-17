@@ -42,7 +42,11 @@ const props = defineProps({
 
         <div class="flex">
           <div v-for="template in data" :key="template.name">
-            <CardTemplate :title="template.name" :description="template.description" />
+            <CardTemplate
+              :title="template.name"
+              :description="template.description"
+              :idTemplate="template.id"
+            />
           </div>
         </div>
       </div>

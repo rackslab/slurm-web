@@ -20,6 +20,9 @@ const props = defineProps({
   },
   templateAuthor: {
     type: Boolean
+  },
+  idTemplate: {
+    type: Number
   }
 })
 </script>
@@ -42,12 +45,13 @@ const props = defineProps({
     <div class="flex-grow"></div>
 
     <div class="mt-4 w-full border-t border-gray-200 dark:border-gray-700">
-      <button
-        class="flex w-full items-center justify-center rounded-b-lg py-3 font-medium transition duration-200 ease-in-out hover:bg-slurmweb hover:text-white dark:bg-gray-700"
-      >
-        Select
-        <ChevronRightIcon class="ml-1 h-5 w-5" />
-      </button>
+      <router-link :to="{ name: 'jobConfiguration', params: { idTemplate: props.idTemplate } }"
+        ><button
+          class="flex w-full items-center justify-center rounded-b-lg py-3 font-medium transition duration-200 ease-in-out hover:bg-slurmweb hover:text-white dark:bg-gray-700"
+        >
+          Select
+          <ChevronRightIcon class="ml-1 h-5 w-5" /></button
+      ></router-link>
     </div>
   </div>
 </template>
