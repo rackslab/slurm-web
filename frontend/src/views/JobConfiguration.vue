@@ -46,7 +46,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <ClusterMainLayout :cluster="props.cluster">
+  <ClusterMainLayout :cluster="props.cluster" :templateTitle="templateTitle">
     <router-link :to="{ name: 'submit-new-job' }"
       ><button
         type="button"

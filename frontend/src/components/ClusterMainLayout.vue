@@ -23,6 +23,9 @@ const props = defineProps({
   cluster: {
     type: String,
     required: true
+  },
+  templateTitle: {
+    type: String
   }
 })
 
@@ -70,6 +73,17 @@ onMounted(() => {
             <router-link :to="{ name: 'submit-new-job' }" class="flex"
               ><ChevronRightIcon class="h-5 w-10 flex-shrink-0 text-gray-400" aria-hidden="true" />
               Submit new job</router-link
+            >
+          </div>
+
+          <div v-if="route.name == 'jobConfiguration'" class="flex items-center">
+            <router-link :to="{ name: 'submit-new-job' }" class="flex"
+              ><ChevronRightIcon class="h-5 w-10 flex-shrink-0 text-gray-400" aria-hidden="true" />
+              Submit new job</router-link
+            >
+            <router-link :to="{ name: 'jobConfiguration' }" class="flex"
+              ><ChevronRightIcon class="h-5 w-10 flex-shrink-0 text-gray-400" aria-hidden="true" />
+              {{ props.templateTitle }}</router-link
             >
           </div>
 
