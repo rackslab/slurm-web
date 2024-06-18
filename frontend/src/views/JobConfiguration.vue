@@ -9,25 +9,12 @@
 <script setup lang="ts">
 import ClusterMainLayout from '@/components/ClusterMainLayout.vue'
 import { ChevronLeftIcon } from '@heroicons/vue/20/solid'
-import { useClusterDataPoller } from '@/composables/DataPoller'
-import type { Template } from '@/composables/GatewayAPI'
-import { ref, onMounted, watch } from 'vue'
+import { onMounted, ref } from 'vue'
+import { useGatewayAPI } from '@/composables/GatewayAPI'
+import type { Ref } from 'vue'
 
-const { data } = useClusterDataPoller<Template[]>('templates', 5000)
-
-const templateTitle = ref()
-const templateDescription = ref()
-
-function getSelectedTemplate() {
-  if (data.value) {
-    data.value.forEach((template) => {
-      if (template.id == props.idTemplate) {
-        templateTitle.value = template.name
-        templateDescription.value = template.description
-      }
-    })
-  }
-}
+const gateway = useGatewayAPI()
+const selectedTemplate: Ref<Record<string, string>> = ref({})
 
 const props = defineProps({
   cluster: {
@@ -38,10 +25,16 @@ const props = defineProps({
     type: Number
   }
 })
-watch([() => props.idTemplate, data], getSelectedTemplate)
 
-onMounted(() => {
-  getSelectedTemplate()
+onMounted(async () => {
+  let getTemplates = await gateway.templates(props.cluster)
+
+  getTemplates.forEach((template) => {
+    if (template.id == props.idTemplate) {
+      selectedTemplate.value['name'] = template.name
+      selectedTemplate.value['description'] = template.description
+    }
+  })
 })
 </script>
 
@@ -59,8 +52,8 @@ onMounted(() => {
 
     <div class="flex justify-center">
       <div class="flex flex-col pt-10">
-        <p class="text-lg font-bold">{{ templateTitle }}</p>
-        <p>{{ templateDescription }}</p>
+        <p class="text-lg font-bold">{{ selectedTemplate.name }}</p>
+        <p>{{ selectedTemplate.description }}</p>
       </div>
     </div>
   </ClusterMainLayout>
