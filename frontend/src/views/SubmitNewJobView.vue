@@ -24,7 +24,13 @@ const props = defineProps({
 </script>
 
 <template>
-  <ClusterMainLayout :cluster="props.cluster">
+  <ClusterMainLayout
+    :cluster="props.cluster"
+    :viewDetails="[
+      { titleView: 'Jobs', routeName: 'jobs' },
+      { titleView: 'Submit a new job', routeName: 'submit-new-job' }
+    ]"
+  >
     <router-link :to="{ name: 'jobs' }"
       ><button
         type="button"

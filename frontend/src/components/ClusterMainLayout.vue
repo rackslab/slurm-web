@@ -17,15 +17,20 @@ import { Bars3Icon, ArrowRightOnRectangleIcon, ServerStackIcon } from '@heroicon
 import { ChevronRightIcon } from '@heroicons/vue/20/solid'
 import MainMenu from '@/components/MainMenu.vue'
 import ClustersPopOver from '@/components/ClustersPopOver.vue'
-import { useRoute } from 'vue-router'
+
+type Breadcrumb = {
+  titleView: string
+  routeName: string
+}
 
 const props = defineProps({
   cluster: {
     type: String,
     required: true
   },
-  templateTitle: {
-    type: String
+  viewDetails: {
+    type: Array<Breadcrumb>,
+    required: true
   }
 })
 
@@ -33,7 +38,6 @@ const clusterNotFound: Ref<boolean> = ref(false)
 const runtimeStore = useRuntimeStore()
 const runtimeConfiguration = useRuntimeConfiguration()
 const authStore = useAuthStore()
-const route = useRoute()
 
 onMounted(() => {
   if (!runtimeStore.checkClusterAvailable(props.cluster)) {
@@ -64,35 +68,12 @@ onMounted(() => {
         <div class="relative mt-1 flex flex-1 items-center">
           <ClustersPopOver :cluster="props.cluster" />
 
-          <router-link :to="{ name: 'jobs' }" class="flex"
-            ><ChevronRightIcon class="h-5 w-10 flex-shrink-0 text-gray-400" aria-hidden="true" />
-            Jobs</router-link
-          >
-
-          <div v-if="route.name == 'submit-new-job'">
-            <router-link :to="{ name: 'submit-new-job' }" class="flex"
-              ><ChevronRightIcon class="h-5 w-10 flex-shrink-0 text-gray-400" aria-hidden="true" />
-              Submit new job</router-link
-            >
-          </div>
-
-          <div v-if="route.name == 'jobConfiguration'" class="flex items-center">
-            <router-link :to="{ name: 'submit-new-job' }" class="flex"
-              ><ChevronRightIcon class="h-5 w-10 flex-shrink-0 text-gray-400" aria-hidden="true" />
-              Submit new job</router-link
-            >
-            <router-link :to="{ name: 'jobConfiguration' }" class="flex"
-              ><ChevronRightIcon class="h-5 w-10 flex-shrink-0 text-gray-400" aria-hidden="true" />
-              {{ props.templateTitle }}</router-link
-            >
-          </div>
-
-          <div v-if="route.name == 'templates'">
-            <router-link :to="{ name: 'templates' }" class="flex"
-              ><ChevronRightIcon class="h-5 w-10 flex-shrink-0 text-gray-400" aria-hidden="true" />
-              Templates</router-link
-            >
-          </div>
+          <span v-for="viewDetail in props.viewDetails" :key="viewDetail.titleView" class="flex">
+            <ChevronRightIcon class="h-5 w-10 flex-shrink-0 text-gray-400" aria-hidden="true" />
+            <router-link :to="{ name: viewDetail.routeName }">{{
+              viewDetail.routeName
+            }}</router-link>
+          </span>
         </div>
         <div class="flex items-center gap-x-4 lg:gap-x-6">
           <!-- Selects clusters button-->

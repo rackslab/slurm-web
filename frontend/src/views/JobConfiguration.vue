@@ -39,7 +39,14 @@ onMounted(async () => {
 </script>
 
 <template>
-  <ClusterMainLayout :cluster="props.cluster" :templateTitle="templateTitle">
+  <ClusterMainLayout
+    :cluster="props.cluster"
+    :viewDetails="[
+      { titleView: 'Jobs', routeName: 'jobs' },
+      { titleView: 'Submit a new job', routeName: 'submit-new-job' },
+      { titleView: selectedTemplate.name, routeName: 'jobConfiguration' }
+    ]"
+  >
     <router-link :to="{ name: 'submit-new-job' }"
       ><button
         type="button"
