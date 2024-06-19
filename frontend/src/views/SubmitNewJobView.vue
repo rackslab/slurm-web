@@ -10,16 +10,23 @@
 import ClusterMainLayout from '@/components/ClusterMainLayout.vue'
 import CardTemplate from '@/components/CardTemplate.vue'
 import { ChevronLeftIcon } from '@heroicons/vue/20/solid'
-import { useClusterDataPoller } from '@/composables/DataPoller'
+import { useGatewayAPI } from '@/composables/GatewayAPI'
+import { onMounted, ref } from 'vue'
 import type { Template } from '@/composables/GatewayAPI'
+import type { Ref } from 'vue'
 
-const { data } = useClusterDataPoller<Template[]>('templates', 5000)
+const gateway = useGatewayAPI()
+const templates: Ref<Array<Template>> = ref([])
 
 const props = defineProps({
   cluster: {
     type: String,
     required: true
   }
+})
+
+onMounted(async () => {
+  templates.value = await gateway.templates(props.cluster)
 })
 </script>
 
@@ -47,7 +54,7 @@ const props = defineProps({
         <p>Select a template to submit a new job</p>
 
         <div class="flex">
-          <div v-for="template in data" :key="template.name">
+          <div v-for="template in templates" :key="template.name">
             <CardTemplate
               :title="template.name"
               :description="template.description"
