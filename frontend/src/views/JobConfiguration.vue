@@ -22,7 +22,7 @@ const props = defineProps({
     required: true
   },
   idTemplate: {
-    type: Number
+    type: String
   }
 })
 
@@ -30,7 +30,7 @@ onMounted(async () => {
   let getTemplates = await gateway.templates(props.cluster)
 
   getTemplates.forEach((template) => {
-    if (template.id == props.idTemplate) {
+    if (template.id == Number(props.idTemplate)) {
       selectedTemplate.value['name'] = template.name
       selectedTemplate.value['description'] = template.description
     }
