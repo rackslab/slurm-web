@@ -35,7 +35,7 @@ onMounted(async () => {
     :cluster="props.cluster"
     :viewDetails="[
       { titleView: 'Jobs', routeName: 'jobs' },
-      { titleView: 'Submit a new job', routeName: 'submit-new-job' }
+      { titleView: 'Submit new job', routeName: 'submit-new-job' }
     ]"
   >
     <router-link :to="{ name: 'jobs' }"
