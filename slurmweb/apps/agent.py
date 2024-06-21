@@ -17,7 +17,7 @@ from ..views import SlurmwebAppRoute
 from ..views import agent as views
 from ..cache import CachingService
 from ..db.models import create_db
-from ..db.data_test import insert_data
+from ..db.test import insert_data
 
 logger = logging.getLogger(__name__)
 
