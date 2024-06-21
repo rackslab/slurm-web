@@ -269,8 +269,8 @@ export interface Input {
   minVal: number
   maxVal: number
   regex: string
-  templates_id: number
-  types_id: number
+  template: number
+  type: number
 }
 
 export function renderClusterOptionalNumber(optionalNumber: ClusterOptionalNumber): string {
