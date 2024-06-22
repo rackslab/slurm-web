@@ -67,8 +67,13 @@ onMounted(() => {
       <div class="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
         <div class="relative mt-1 flex flex-1 items-center">
           <ClustersPopOver :cluster="props.cluster" />
-          <ChevronRightIcon class="h-5 w-10 flex-shrink-0 text-gray-400" aria-hidden="true" />
-          {{ props.title }}
+
+          <span v-for="viewDetail in props.viewDetails" :key="viewDetail.titleView" class="flex">
+            <ChevronRightIcon class="h-5 w-10 flex-shrink-0 text-gray-400" aria-hidden="true" />
+            <router-link :to="{ name: viewDetail.routeName }">{{
+              viewDetail.titleView
+            }}</router-link>
+          </span>
         </div>
         <div class="flex items-center gap-x-4 lg:gap-x-6">
           <!-- Selects clusters button-->
