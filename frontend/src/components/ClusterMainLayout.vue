@@ -18,13 +18,18 @@ import { ChevronRightIcon } from '@heroicons/vue/20/solid'
 import MainMenu from '@/components/MainMenu.vue'
 import ClustersPopOver from '@/components/ClustersPopOver.vue'
 
+type Breadcrumb = {
+  titleView: string
+  routeName: string
+}
+
 const props = defineProps({
   cluster: {
     type: String,
     required: true
   },
-  title: {
-    type: String,
+  viewDetails: {
+    type: Array<Breadcrumb>,
     required: true
   }
 })
