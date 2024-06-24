@@ -17,7 +17,6 @@ from ..views import SlurmwebAppRoute
 from ..views import agent as views
 from ..cache import CachingService
 from ..db.models import create_db
-from ..db.test import insert_data
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +46,7 @@ class SlurmwebAppAgent(SlurmwebWebApp, RFLTokenizedRBACWebApp):
         SlurmwebWebApp.__init__(self, seed)
 
         create_db(self.settings.jobtemplates.db)
-        insert_data()
-
+        
         # Load RacksDB blueprint and fail with error if unable to load schema or
         # database.
         try:

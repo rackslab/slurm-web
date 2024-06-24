@@ -1,4 +1,4 @@
-from .models import (
+from ..slurmweb.db.models import (
     Templates,
     Types,
     Inputs,
