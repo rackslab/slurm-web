@@ -11,11 +11,13 @@
   $ python3 docs/utils/gen-conf-policy.py conf/vendor/policy.yml > \
     docs/modules/conf/partials/policy-actions.adoc
 """
+
 import sys
 from pathlib import Path
 
 import jinja2
 import yaml
+
 
 def bases(obj):
     """Jinja2 Filter to list of parent classes names of an object."""
@@ -23,14 +25,13 @@ def bases(obj):
 
 
 def main():
-
     with open(sys.argv[1]) as fh:
         content = yaml.safe_load(fh)
     # Render template
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(Path(__file__).parent))
     template = env.get_template("policy-actions.adoc.j2")
     output = template.render(
-        actions=content['actions'],
+        actions=content["actions"],
     )
     print(output)
 
